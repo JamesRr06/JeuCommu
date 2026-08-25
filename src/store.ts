@@ -3,6 +3,8 @@ import { uid } from './lib'
 import {
   DEFAULT_SCORING,
   MAX_PLAYERS,
+  type GameConfig,
+  type GameId,
   type ID,
   type Player,
   type RankRow,
@@ -15,27 +17,43 @@ const KEY = 'jeucommu.v1'
 
 interface State {
   sessions: Session[]
+  /** Barème proposé par défaut aux nouvelles sessions (modifiable depuis les réglages). */
+  defaults: Scoring
+}
+
+function empty(): State {
+  return { sessions: [], defaults: structuredClone(DEFAULT_SCORING) }
+}
+
+function mergeScoring(scoring: Partial<Scoring> | undefined): Scoring {
+  const merged = structuredClone(DEFAULT_SCORING)
+  for (const game of Object.keys(merged) as GameId[]) {
+    Object.assign(merged[game], scoring?.[game] ?? {})
+  }
+  return merged
 }
 
 function load(): State {
   try {
     const raw = localStorage.getItem(KEY)
-    if (!raw) return { sessions: [] }
-    const parsed = JSON.parse(raw) as State
-    if (!parsed || !Array.isArray(parsed.sessions)) return { sessions: [] }
-    // Tolère les sessions écrites par une version antérieure du barème.
+    if (!raw) return empty()
+    const parsed = JSON.parse(raw) as Partial<State>
+    if (!parsed || !Array.isArray(parsed.sessions)) return empty()
+    // Tolère les sessions écrites par une version antérieure du modèle.
     for (const s of parsed.sessions) {
-      s.scoring = { ...DEFAULT_SCORING, ...s.scoring }
       s.rounds ??= []
       s.players ??= []
+      s.gameId ??= s.rounds[0]?.gameId ?? 'undercover'
+      s.scoring = mergeScoring(s.scoring)
+      s.config ??= { nbUndercover: 1, nbMrWhite: 0 }
     }
-    return parsed
+    return { sessions: parsed.sessions, defaults: mergeScoring(parsed.defaults) }
   } catch {
-    return { sessions: [] }
+    return empty()
   }
 }
 
-let state: State = { sessions: [] }
+let state: State = empty()
 let loaded = false
 
 const listeners = new Set<() => void>()
@@ -79,28 +97,51 @@ export function useSession(id: ID | null): Session | undefined {
   return sessions.find((s) => s.id === id)
 }
 
-function updateSession(id: ID, fn: (s: Session) => Session) {
-  ensureLoaded()
-  commit({ sessions: state.sessions.map((s) => (s.id === id ? fn(s) : s)) })
+/** Barème par défaut des futures sessions. */
+export function useDefaultScoring(): Scoring {
+  return useSyncExternalStore(subscribe, snapshot).defaults
 }
 
-export function createSession(name: string): Session {
+export function setDefaultScoring(scoring: Scoring) {
+  ensureLoaded()
+  commit({ ...state, defaults: scoring })
+}
+
+function updateSession(id: ID, fn: (s: Session) => Session) {
+  ensureLoaded()
+  commit({ ...state, sessions: state.sessions.map((s) => (s.id === id ? fn(s) : s)) })
+}
+
+/** Fabrique un joueur hors session (utilisé par l'assistant de création). */
+export function newPlayer(name: string): Player {
+  return { id: uid(), name: name.trim() }
+}
+
+export function createSession(input: {
+  name: string
+  gameId: GameId
+  players: Player[]
+  config: GameConfig
+  scoring: Scoring
+}): Session {
   ensureLoaded()
   const session: Session = {
     id: uid(),
-    name: name.trim() || 'Session',
+    name: input.name.trim() || 'Session',
+    gameId: input.gameId,
     createdAt: Date.now(),
-    players: [],
-    scoring: structuredClone(DEFAULT_SCORING),
+    players: input.players.slice(0, MAX_PLAYERS),
+    config: structuredClone(input.config),
+    scoring: structuredClone(input.scoring),
     rounds: [],
   }
-  commit({ sessions: [session, ...state.sessions] })
+  commit({ ...state, sessions: [session, ...state.sessions] })
   return session
 }
 
 export function deleteSession(id: ID) {
   ensureLoaded()
-  commit({ sessions: state.sessions.filter((s) => s.id !== id) })
+  commit({ ...state, sessions: state.sessions.filter((s) => s.id !== id) })
 }
 
 export function renameSession(id: ID, name: string) {
@@ -113,10 +154,7 @@ export function addPlayer(sessionId: ID, name: string): boolean {
   const session = state.sessions.find((s) => s.id === sessionId)
   if (!session || session.players.length >= MAX_PLAYERS) return false
   if (session.players.some((p) => p.name.toLowerCase() === trimmed.toLowerCase())) return false
-  updateSession(sessionId, (s) => ({
-    ...s,
-    players: [...s.players, { id: uid(), name: trimmed }],
-  }))
+  updateSession(sessionId, (s) => ({ ...s, players: [...s.players, newPlayer(trimmed)] }))
   return true
 }
 
@@ -131,10 +169,11 @@ export function renamePlayer(sessionId: ID, playerId: ID, name: string) {
 
 /** Retire un joueur de la liste. Les parties déjà jouées le gardent au classement. */
 export function removePlayer(sessionId: ID, playerId: ID) {
-  updateSession(sessionId, (s) => ({
-    ...s,
-    players: s.players.filter((p) => p.id !== playerId),
-  }))
+  updateSession(sessionId, (s) => ({ ...s, players: s.players.filter((p) => p.id !== playerId) }))
+}
+
+export function setConfig(sessionId: ID, config: GameConfig) {
+  updateSession(sessionId, (s) => ({ ...s, config }))
 }
 
 export function setScoring(sessionId: ID, scoring: Scoring) {

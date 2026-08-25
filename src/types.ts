@@ -19,6 +19,24 @@ export const CAMP_LABEL: Record<Camp, string> = {
 
 export type GameId = 'undercover' | 'loupgarou'
 
+// ---------- Réglages propres à chaque jeu ----------
+
+export interface UndercoverConfig {
+  nbUndercover: number
+  nbMrWhite: number
+}
+
+export interface LoupGarouConfig {
+  nbLoups: number
+  /** Identifiants des rôles spéciaux retenus (voir games/loupgarou/roles.ts). */
+  specials: string[]
+}
+
+/** Chaque jeu lit la variante qui le concerne (cast en tête de son composant). */
+export type GameConfig = UndercoverConfig | LoupGarouConfig
+
+// ---------- Parties et classement ----------
+
 export interface PlayerResult {
   playerId: ID
   /** Libellé du rôle tenu pendant la partie (ex. "Voyante", "Undercover"). */
@@ -38,22 +56,22 @@ export interface Round {
   results: PlayerResult[]
 }
 
-/** Points attribués à chaque membre du camp gagnant. */
-export interface Scoring {
-  undercover: { civils: number; undercover: number; mrwhite: number }
-  loupgarou: { village: number; loups: number; amoureux: number }
-}
+/** Points attribués à chaque membre du camp gagnant, par jeu puis par camp. */
+export type Scoring = Record<GameId, Record<string, number>>
 
 export const DEFAULT_SCORING: Scoring = {
   undercover: { civils: 1, undercover: 3, mrwhite: 4 },
   loupgarou: { village: 1, loups: 2, amoureux: 3 },
 }
 
+/** Une session = un jeu, une liste de joueurs, des réglages, et les parties jouées. */
 export interface Session {
   id: ID
   name: string
+  gameId: GameId
   createdAt: number
   players: Player[]
+  config: GameConfig
   scoring: Scoring
   rounds: Round[]
 }

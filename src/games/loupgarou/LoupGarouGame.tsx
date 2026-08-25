@@ -1,8 +1,8 @@
 import { useMemo, useState } from 'react'
-import { Counter, TopBar } from '../../components/UI'
+import { TopBar } from '../../components/UI'
 import { plural, shuffle, uid } from '../../lib'
-import type { Camp, ID, PlayerResult, Round, Session } from '../../types'
-import { OPTIONAL_ROLES, ROLES, type RoleId } from './roles'
+import type { Camp, ID, LoupGarouConfig, PlayerResult, Round, Session } from '../../types'
+import { ROLES, type RoleId } from './roles'
 
 interface LP {
   playerId: ID
@@ -25,7 +25,7 @@ const STEP_TITLE: Record<StepId, string> = {
 }
 
 type Phase =
-  | { name: 'setup' }
+  | { name: 'intro' }
   | { name: 'deal'; index: number; revealed: boolean }
   | { name: 'night-intro' }
   | { name: 'step'; idx: number }
@@ -46,15 +46,15 @@ export default function LoupGarouGame({
   onFinish: (round: Round) => void
   onQuit: () => void
 }) {
-  // --- Composition ---
-  const [selected, setSelected] = useState<ID[]>(session.players.map((p) => p.id))
-  const nbPlayers = selected.length
-  const [nbLoups, setNbLoups] = useState(() => Math.max(1, Math.round(session.players.length / 4)))
-  const [specials, setSpecials] = useState<RoleId[]>(['voyante', 'sorciere', 'chasseur'])
+  // --- Composition : définie dans les réglages de la session ---
+  const config = session.config as LoupGarouConfig
+  const nbPlayers = session.players.length
+  const nbLoups = config.nbLoups
+  const specials = config.specials as RoleId[]
 
   // --- Partie ---
   const [players, setPlayers] = useState<LP[]>([])
-  const [phase, setPhase] = useState<Phase>({ name: 'setup' })
+  const [phase, setPhase] = useState<Phase>({ name: 'intro' })
   const [steps, setSteps] = useState<StepId[]>([])
   const [nightNo, setNightNo] = useState(0)
   const [target, setTarget] = useState<ID | null>(null)
@@ -69,23 +69,9 @@ export default function LoupGarouGame({
   const [poisonUsed, setPoisonUsed] = useState(false)
 
   const alive = useMemo(() => players.filter((p) => p.alive), [players])
-  const nbVillageois = nbPlayers - nbLoups - specials.length
-  const setupError =
-    nbPlayers < 4
-      ? 'Il faut au moins 4 joueurs.'
-      : nbLoups < 1
-        ? 'Il faut au moins 1 loup-garou.'
-        : nbVillageois < 0
-          ? 'Trop de rôles spéciaux pour le nombre de joueurs.'
-          : nbLoups >= nbPlayers - nbLoups
-            ? 'Trop de loups : le village doit être majoritaire.'
-            : null
+  const nbVillageois = Math.max(0, nbPlayers - nbLoups - specials.length)
 
   const byId = (id: ID | null) => players.find((p) => p.playerId === id)
-
-  function toggleSpecial(role: RoleId) {
-    setSpecials((cur) => (cur.includes(role) ? cur.filter((r) => r !== role) : [...cur, role]))
-  }
 
   function start() {
     const roles: RoleId[] = []
@@ -93,7 +79,7 @@ export default function LoupGarouGame({
     roles.push(...specials)
     while (roles.length < nbPlayers) roles.push('villageois')
 
-    const chosen = shuffle(session.players.filter((p) => selected.includes(p.id)))
+    const chosen = shuffle(session.players)
     const shuffled = shuffle(roles)
     setPlayers(
       chosen.map((p, i) => ({
@@ -293,65 +279,42 @@ export default function LoupGarouGame({
 
   // ---------- Écrans ----------
 
-  if (phase.name === 'setup') {
+  if (phase.name === 'intro') {
     return (
       <div className="app">
-        <TopBar title="Loup-Garou" subtitle="Composition du village" onBack={onQuit} />
+        <TopBar title="Loup-Garou" subtitle={`${plural(nbPlayers, 'joueur')} · prêt ?`} onBack={onQuit} />
         <div className="content">
           <div className="card">
-            <h3>Joueurs ({nbPlayers})</h3>
-            <div className="list">
-              {session.players.map((p) => (
-                <button
-                  key={p.id}
-                  className={`item${selected.includes(p.id) ? ' selected' : ''}`}
-                  onClick={() =>
-                    setSelected((cur) => (cur.includes(p.id) ? cur.filter((x) => x !== p.id) : [...cur, p.id]))
-                  }
-                >
-                  <span className="grow">{p.name}</span>
-                  <span className="badge">{selected.includes(p.id) ? 'Joue' : 'Absent'}</span>
-                </button>
+            <h3>Le village ce soir</h3>
+            <div className="row wrap chips">
+              <span className="badge accent">{plural(nbLoups, 'loup')}</span>
+              <span className="badge accent">{nbVillageois} villageois</span>
+              {specials.map((r) => (
+                <span key={r} className="badge">
+                  {ROLES[r].label}
+                </span>
               ))}
             </div>
+            <p className="muted">Modifiable à tout moment depuis l’engrenage.</p>
           </div>
 
           <div className="card">
-            <h3>Loups-Garous</h3>
-            <div className="row between">
-              <span>Nombre de loups</span>
-              <Counter value={nbLoups} min={1} max={Math.max(1, Math.floor((nbPlayers - 1) / 2))} onChange={setNbLoups} />
-            </div>
-          </div>
-
-          <div className="card">
-            <h3>Rôles spéciaux</h3>
+            <h3>Rôles en jeu</h3>
             <div className="list">
-              {OPTIONAL_ROLES.map((r) => (
-                <button
-                  key={r}
-                  className={`item${specials.includes(r) ? ' selected' : ''}`}
-                  onClick={() => toggleSpecial(r)}
-                >
+              {specials.map((r) => (
+                <div key={r} className="item">
                   <span className="grow">
                     {ROLES[r].label}
                     <br />
                     <span className="muted">{ROLES[r].description}</span>
                   </span>
-                  <span className="badge">{specials.includes(r) ? 'Inclus' : '—'}</span>
-                </button>
+                </div>
               ))}
             </div>
-            <p className="muted">
-              Simples villageois : {Math.max(0, nbVillageois)} · Total {nbLoups + specials.length + Math.max(0, nbVillageois)}/
-              {nbPlayers}
-            </p>
           </div>
-
-          {setupError && <p className="muted center-text">{setupError}</p>}
         </div>
         <div className="footer-actions">
-          <button className="primary big block" disabled={!!setupError} onClick={start}>
+          <button className="primary big block" onClick={start}>
             Distribuer les rôles
           </button>
         </div>

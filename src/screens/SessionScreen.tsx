@@ -1,41 +1,34 @@
 import { useState } from 'react'
 import { ConfirmButton, Empty, TopBar } from '../components/UI'
+import SessionSettings from '../components/SessionSettings'
+import { OpenSettings } from '../components/settings-context'
 import { formatDate, plural } from '../lib'
-import {
-  addPlayer,
-  deleteRound,
-  ranking,
-  removePlayer,
-  renamePlayer,
-  renameSession,
-  setScoring,
-  useSession,
-} from '../store'
-import { CAMP_LABEL, MAX_PLAYERS, type GameId, type ID, type Scoring } from '../types'
-import { GAMES, getGame } from '../games/registry'
+import { deleteRound, ranking, useSession } from '../store'
+import { CAMP_LABEL, type ID } from '../types'
+import { getGame } from '../games/registry'
 
-type Tab = 'jouer' | 'joueurs' | 'classement' | 'historique' | 'reglages'
+type Tab = 'partie' | 'classement' | 'historique'
 
 const TABS: { id: Tab; label: string }[] = [
-  { id: 'jouer', label: 'Jouer' },
-  { id: 'joueurs', label: 'Joueurs' },
+  { id: 'partie', label: 'Partie' },
   { id: 'classement', label: 'Classement' },
   { id: 'historique', label: 'Historique' },
-  { id: 'reglages', label: 'Réglages' },
 ]
 
 export default function SessionScreen({
   sessionId,
   onBack,
   onLaunch,
+  onDeleted,
 }: {
   sessionId: ID
   onBack: () => void
-  onLaunch: (gameId: GameId) => void
+  onLaunch: () => void
+  onDeleted: () => void
 }) {
   const session = useSession(sessionId)
-  const [tab, setTab] = useState<Tab>('jouer')
-  const [newPlayer, setNewPlayer] = useState('')
+  const [tab, setTab] = useState<Tab>('partie')
+  const [settings, setSettings] = useState(false)
 
   if (!session) {
     return (
@@ -45,23 +38,20 @@ export default function SessionScreen({
     )
   }
 
+  const game = getGame(session.gameId)
   const rows = ranking(session)
-
-  function addCurrent() {
-    if (addPlayer(sessionId, newPlayer)) setNewPlayer('')
-  }
-
-  function patchScoring(patch: (s: Scoring) => Scoring) {
-    setScoring(sessionId, patch(structuredClone(session!.scoring)))
-  }
+  const blocking = game.validate(session.players.length, session.config)
+  const last = session.rounds[0]
 
   return (
+    <OpenSettings.Provider value={() => setSettings(true)}>
     <div className="app">
       <TopBar
         title={session.name}
-        subtitle={`${plural(session.players.length, 'joueur')} · ${plural(session.rounds.length, 'partie')}`}
+        subtitle={`${game.emoji} ${game.name} · ${plural(session.players.length, 'joueur')} · ${plural(session.rounds.length, 'partie')}`}
         onBack={onBack}
       />
+
       <div className="tabs">
         {TABS.map((t) => (
           <button key={t.id} className={tab === t.id ? 'active' : ''} onClick={() => setTab(t.id)}>
@@ -71,71 +61,45 @@ export default function SessionScreen({
       </div>
 
       <div className="content">
-        {tab === 'jouer' && (
+        {tab === 'partie' && (
           <>
-            {GAMES.map((g) => {
-              const ok = session.players.length >= g.minPlayers
-              return (
-                <div key={g.id} className="card">
-                  <h2>
-                    {g.emoji} {g.name}
-                  </h2>
-                  <p className="muted">{g.tagline}</p>
-                  <button className="primary block" disabled={!ok} onClick={() => onLaunch(g.id)}>
-                    {ok ? 'Lancer une partie' : `${g.minPlayers} joueurs minimum`}
-                  </button>
-                </div>
-              )
-            })}
-            <p className="muted center-text">D’autres jeux arriveront ici.</p>
-          </>
-        )}
-
-        {tab === 'joueurs' && (
-          <div className="card">
-            <h3>
-              Joueurs ({session.players.length}/{MAX_PLAYERS})
-            </h3>
-            <div className="row">
-              <input
-                className="grow"
-                type="text"
-                value={newPlayer}
-                placeholder="Prénom"
-                maxLength={20}
-                onChange={(e) => setNewPlayer(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && addCurrent()}
-              />
-              <button className="primary" disabled={session.players.length >= MAX_PLAYERS} onClick={addCurrent}>
-                +
-              </button>
-            </div>
-            {session.players.length === 0 ? (
-              <Empty>Ajoute les joueurs de la soirée.</Empty>
-            ) : (
-              <div className="list">
-                {session.players.map((p) => (
-                  <div key={p.id} className="item">
-                    <span className="grow">{p.name}</span>
-                    <button
-                      className="small ghost"
-                      onClick={() => {
-                        const next = prompt('Nouveau prénom', p.name)
-                        if (next) renamePlayer(sessionId, p.id, next)
-                      }}
-                    >
-                      ✎
-                    </button>
-                    <ConfirmButton
-                      label="✕"
-                      message={`Retirer ${p.name} de la session ? Ses parties déjà jouées restent au classement.`}
-                      onConfirm={() => removePlayer(sessionId, p.id)}
-                    />
-                  </div>
+            <div className="card hero">
+              <span className="game-emoji big">{game.emoji}</span>
+              <h2>{game.name}</h2>
+              <p className="muted">{game.tagline}</p>
+              <div className="row wrap chips center">
+                {game.describe(session.players.length, session.config).map((d, i) => (
+                  <span key={i} className="badge accent">
+                    {d}
+                  </span>
                 ))}
               </div>
-            )}
-          </div>
+            </div>
+
+            <div className="card">
+              <h3>Où en est la soirée</h3>
+              <div className="row between">
+                <span className="muted">Parties jouées</span>
+                <strong>{session.rounds.length}</strong>
+              </div>
+              <div className="row between">
+                <span className="muted">En tête</span>
+                <strong>{rows[0] && session.rounds.length > 0 ? `${rows[0].player.name} · ${rows[0].points} pts` : '—'}</strong>
+              </div>
+              {last && (
+                <>
+                  <div className="sep" />
+                  <p className="muted">
+                    Dernière partie · {formatDate(last.playedAt)}
+                    <br />
+                    <span className="badge success">{CAMP_LABEL[last.winnerCamp]}</span> {last.summary}
+                  </p>
+                </>
+              )}
+            </div>
+
+            {blocking && <p className="error center-text">{blocking}</p>}
+          </>
         )}
 
         {tab === 'classement' && (
@@ -177,10 +141,7 @@ export default function SessionScreen({
                 {session.rounds.map((r) => (
                   <div key={r.id} className="item">
                     <span className="grow">
-                      <strong>
-                        {getGame(r.gameId).emoji} {getGame(r.gameId).name}
-                      </strong>{' '}
-                      <span className="badge success">{CAMP_LABEL[r.winnerCamp]}</span>
+                      <strong>{getGame(r.gameId).name}</strong> <span className="badge success">{CAMP_LABEL[r.winnerCamp]}</span>
                       <br />
                       <span className="muted">
                         {formatDate(r.playedAt)} · {r.summary}
@@ -197,79 +158,20 @@ export default function SessionScreen({
             )}
           </div>
         )}
-
-        {tab === 'reglages' && (
-          <>
-            <div className="card">
-              <h3>Nom de la session</h3>
-              <input
-                type="text"
-                value={session.name}
-                onChange={(e) => renameSession(sessionId, e.target.value)}
-              />
-            </div>
-
-            <div className="card">
-              <h3>Points — Undercover</h3>
-              {(
-                [
-                  ['civils', 'Civils'],
-                  ['undercover', 'Undercover'],
-                  ['mrwhite', 'Mr White'],
-                ] as const
-              ).map(([key, label]) => (
-                <div key={key} className="row between">
-                  <span>{label}</span>
-                  <input
-                    style={{ width: 90 }}
-                    type="number"
-                    min={0}
-                    value={session.scoring.undercover[key]}
-                    onChange={(e) =>
-                      patchScoring((s) => {
-                        s.undercover[key] = Math.max(0, Number(e.target.value) || 0)
-                        return s
-                      })
-                    }
-                  />
-                </div>
-              ))}
-            </div>
-
-            <div className="card">
-              <h3>Points — Loup-Garou</h3>
-              {(
-                [
-                  ['village', 'Village'],
-                  ['loups', 'Loups-Garous'],
-                  ['amoureux', 'Amoureux'],
-                ] as const
-              ).map(([key, label]) => (
-                <div key={key} className="row between">
-                  <span>{label}</span>
-                  <input
-                    style={{ width: 90 }}
-                    type="number"
-                    min={0}
-                    value={session.scoring.loupgarou[key]}
-                    onChange={(e) =>
-                      patchScoring((s) => {
-                        s.loupgarou[key] = Math.max(0, Number(e.target.value) || 0)
-                        return s
-                      })
-                    }
-                  />
-                </div>
-              ))}
-            </div>
-
-            <p className="muted center-text">
-              Les points sont figés au moment où une partie est enregistrée : modifier le barème n’altère pas
-              l’historique.
-            </p>
-          </>
-        )}
       </div>
+
+      {tab === 'partie' && (
+        <div className="footer-actions">
+          <button className="primary big block" disabled={!!blocking} onClick={onLaunch}>
+            {session.rounds.length === 0 ? 'Lancer la première partie' : 'Lancer une partie'}
+          </button>
+        </div>
+      )}
+
+      {settings && (
+        <SessionSettings sessionId={sessionId} onClose={() => setSettings(false)} onDeleted={onDeleted} />
+      )}
     </div>
+    </OpenSettings.Provider>
   )
 }

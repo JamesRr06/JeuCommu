@@ -1,8 +1,7 @@
 import { useMemo, useState } from 'react'
 import { TopBar } from '../../components/UI'
-import { Counter } from '../../components/UI'
 import { normalize, pick, plural, shuffle, uid } from '../../lib'
-import type { Camp, ID, PlayerResult, Round, Session } from '../../types'
+import type { Camp, ID, PlayerResult, Round, Session, UndercoverConfig } from '../../types'
 import { WORD_PAIRS } from './words'
 
 type UndercoverRole = 'civil' | 'undercover' | 'mrwhite'
@@ -29,7 +28,7 @@ interface Assignment {
 }
 
 type Phase =
-  | { name: 'setup' }
+  | { name: 'intro' }
   | { name: 'deal'; index: number; revealed: boolean }
   | { name: 'play' }
   | { name: 'eliminated'; playerId: ID }
@@ -45,9 +44,10 @@ export default function UndercoverGame({
   onFinish: (round: Round) => void
   onQuit: () => void
 }) {
-  const [selected, setSelected] = useState<ID[]>(session.players.map((p) => p.id))
-  const [nbUndercover, setNbUndercover] = useState(1)
-  const [nbMrWhite, setNbMrWhite] = useState(0)
+  // Composition et effectif viennent des réglages de la session.
+  const config = session.config as UndercoverConfig
+  const nbPlayers = session.players.length
+
   const [words, setWords] = useState<{ civil: string; undercover: string }>(() => {
     const [a, b] = pick(WORD_PAIRS)
     return { civil: a, undercover: b }
@@ -55,39 +55,23 @@ export default function UndercoverGame({
   const [swapWords, setSwapWords] = useState(false)
 
   const [assignments, setAssignments] = useState<Assignment[]>([])
-  const [phase, setPhase] = useState<Phase>({ name: 'setup' })
+  const [phase, setPhase] = useState<Phase>({ name: 'intro' })
   const [target, setTarget] = useState<ID | null>(null)
   const [guess, setGuess] = useState('')
   const [starter, setStarter] = useState<string>('')
-
-  const nbPlayers = selected.length
-  const maxInfiltres = Math.max(1, Math.floor((nbPlayers - 1) / 2))
-  const nbInfiltres = nbUndercover + nbMrWhite
-  const setupError =
-    nbPlayers < 3
-      ? 'Il faut au moins 3 joueurs.'
-      : nbInfiltres > maxInfiltres
-        ? `Trop d'infiltrés : ${maxInfiltres} maximum pour ${nbPlayers} joueurs.`
-        : nbUndercover < 1
-          ? 'Il faut au moins 1 undercover.'
-          : null
 
   const alive = useMemo(() => assignments.filter((a) => a.alive), [assignments])
 
   const civilWord = swapWords ? words.undercover : words.civil
   const undercoverWord = swapWords ? words.civil : words.undercover
 
-  function togglePlayer(id: ID) {
-    setSelected((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]))
-  }
-
   function start() {
     const roles: UndercoverRole[] = []
-    for (let i = 0; i < nbUndercover; i++) roles.push('undercover')
-    for (let i = 0; i < nbMrWhite; i++) roles.push('mrwhite')
+    for (let i = 0; i < config.nbUndercover; i++) roles.push('undercover')
+    for (let i = 0; i < config.nbMrWhite; i++) roles.push('mrwhite')
     while (roles.length < nbPlayers) roles.push('civil')
 
-    const players = shuffle(session.players.filter((p) => selected.includes(p.id)))
+    const players = shuffle(session.players)
     const shuffledRoles = shuffle(roles)
     const next: Assignment[] = players.map((p, i) => {
       const role = shuffledRoles[i]
@@ -182,44 +166,23 @@ export default function UndercoverGame({
 
   // ---------- Écrans ----------
 
-  if (phase.name === 'setup') {
+  if (phase.name === 'intro') {
     return (
       <div className="app">
-        <TopBar title="Undercover" subtitle="Réglages de la partie" onBack={onQuit} />
+        <TopBar title="Undercover" subtitle={`${plural(nbPlayers, 'joueur')} · prêt ?`} onBack={onQuit} />
         <div className="content">
           <div className="card">
-            <h3>Joueurs ({nbPlayers})</h3>
-            <div className="list">
-              {session.players.map((p) => (
-                <button
-                  key={p.id}
-                  className={`item${selected.includes(p.id) ? ' selected' : ''}`}
-                  onClick={() => togglePlayer(p.id)}
-                >
-                  <span className="grow">{p.name}</span>
-                  <span className="badge">{selected.includes(p.id) ? 'Joue' : 'Absent'}</span>
-                </button>
-              ))}
+            <h3>Composition</h3>
+            <div className="row wrap chips">
+              <span className="badge accent">{plural(nbPlayers - config.nbUndercover - config.nbMrWhite, 'civil')}</span>
+              <span className="badge accent">{plural(config.nbUndercover, 'undercover')}</span>
+              <span className="badge accent">{config.nbMrWhite} Mr White</span>
             </div>
+            <p className="muted">Modifiable à tout moment depuis l’engrenage.</p>
           </div>
 
           <div className="card">
-            <h3>Rôles</h3>
-            <div className="row between">
-              <span>Undercover</span>
-              <Counter value={nbUndercover} min={1} max={Math.max(1, maxInfiltres)} onChange={setNbUndercover} />
-            </div>
-            <div className="row between">
-              <span>Mr White</span>
-              <Counter value={nbMrWhite} min={0} max={Math.max(0, maxInfiltres - 1)} onChange={setNbMrWhite} />
-            </div>
-            <p className="muted">
-              {plural(Math.max(0, nbPlayers - nbInfiltres), 'civil')} · Mr White ne reçoit aucun mot et doit bluffer.
-            </p>
-          </div>
-
-          <div className="card">
-            <h3>Mots</h3>
+            <h3>Mots de la manche</h3>
             <div className="row between">
               <span className="muted">Civils</span>
               <strong>{civilWord}</strong>
@@ -238,16 +201,14 @@ export default function UndercoverGame({
               >
                 Autres mots
               </button>
-              <button className="grow small" onClick={() => setSwapWords((s) => !s)}>
+              <button className="grow small" onClick={() => setSwapWords((v) => !v)}>
                 Inverser
               </button>
             </div>
           </div>
-
-          {setupError && <p className="muted center-text">{setupError}</p>}
         </div>
         <div className="footer-actions">
-          <button className="primary big block" disabled={!!setupError} onClick={start}>
+          <button className="primary big block" onClick={start}>
             Distribuer les mots
           </button>
         </div>
