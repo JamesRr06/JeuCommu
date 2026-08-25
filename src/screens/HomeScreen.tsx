@@ -16,7 +16,7 @@ export default function HomeScreen({ onOpen }: { onOpen: (id: ID) => void }) {
 
   return (
     <div className="app">
-      <TopBar title="Soirée Jeux" subtitle="Jeux d’ambiance hors ligne" />
+      <TopBar title="JeuCommu" subtitle="Jeux d’ambiance hors ligne" />
       <div className="content">
         <div className="card">
           <h3>Nouvelle session</h3>

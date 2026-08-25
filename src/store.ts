@@ -11,7 +11,7 @@ import {
   type Session,
 } from './types'
 
-const KEY = 'party-games.v1'
+const KEY = 'jeucommu.v1'
 
 interface State {
   sessions: Session[]

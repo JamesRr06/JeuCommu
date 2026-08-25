@@ -1,8 +1,8 @@
 import type { CapacitorConfig } from '@capacitor/cli'
 
 const config: CapacitorConfig = {
-  appId: 'fr.maxim.partygames',
-  appName: 'Soirée Jeux',
+  appId: 'fr.maxim.jeucommu',
+  appName: 'JeuCommu',
   webDir: 'dist',
   android: {
     allowMixedContent: false,

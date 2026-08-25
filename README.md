@@ -1,4 +1,4 @@
-# Soirée Jeux 🎲
+# JeuCommu 🎲
 
 Application Android **100 % hors ligne** pour animer des jeux d'ambiance en soirée, sur un seul téléphone
 qu'on se passe entre joueurs.
@@ -12,7 +12,7 @@ qu'on se passe entre joueurs.
 ## Télécharger l'APK
 
 1. Onglet **Releases** du dépôt GitHub.
-2. Prendre `soiree-jeux.apk` (release **Dernière version (main)** pour le dernier build).
+2. Prendre `jeucommu.apk` (release **Dernière version (main)** pour le dernier build).
 3. Sur le téléphone : ouvrir le fichier, autoriser « Installer des applications inconnues » pour le navigateur,
    puis installer.
 
