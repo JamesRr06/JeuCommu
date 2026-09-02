@@ -37,7 +37,7 @@ function drawWords(): { civil: string; undercover: string } {
 type Phase =
   | { name: 'intro' }
   | { name: 'deal'; index: number; revealed: boolean }
-  | { name: 'play' }
+  | { name: 'play'; turn: number }
   | { name: 'eliminated'; playerId: ID }
   | { name: 'guess'; playerId: ID }
   | { name: 'result'; winner: Camp; reason: string }
@@ -57,6 +57,9 @@ export default function UndercoverGame({ session, onFinish, onQuit }: GameProps)
   const [starter, setStarter] = useState<string>('')
 
   const alive = useMemo(() => assignments.filter((a) => a.alive), [assignments])
+
+  /** Le tour en cours se déduit du nombre d'éliminés : un tour par élimination. */
+  const turnOf = (list: Assignment[]) => list.filter((a) => !a.alive).length + 1
 
   const civilWord = words.civil
   const undercoverWord = words.undercover
@@ -85,7 +88,7 @@ export default function UndercoverGame({ session, onFinish, onQuit }: GameProps)
 
   function endOfDeal() {
     setStarter(pick(assignments).name)
-    setPhase({ name: 'play' })
+    setPhase({ name: 'play', turn: 1 })
   }
 
   /** Vérifie les conditions de victoire après une élimination. */
@@ -124,13 +127,15 @@ export default function UndercoverGame({ session, onFinish, onQuit }: GameProps)
     resume()
   }
 
+  /** Retour au débat après une élimination : un tour de plus, les mêmes mots. */
   function resume(list: Assignment[] = assignments) {
     const end = checkEnd(list)
-    if (end) setPhase({ name: 'result', ...end })
-    else {
-      setStarter(pick(list.filter((a) => a.alive)).name)
-      setPhase({ name: 'play' })
+    if (end) {
+      setPhase({ name: 'result', ...end })
+      return
     }
+    setStarter(pick(list.filter((a) => a.alive)).name)
+    setPhase({ name: 'play', turn: turnOf(list) })
   }
 
   function submitGuess(correct: boolean) {
@@ -263,8 +268,8 @@ export default function UndercoverGame({ session, onFinish, onQuit }: GameProps)
     return (
       <div className="app">
         <TopBar
-          title="Undercover"
-          subtitle={`${plural(alive.length, 'joueur')} en vie`}
+          title={`Tour ${phase.turn}`}
+          subtitle={`${plural(alive.length, 'joueur')} en vie · mêmes mots`}
           right={
             <button
               className="icon"
@@ -277,11 +282,18 @@ export default function UndercoverGame({ session, onFinish, onQuit }: GameProps)
           }
         />
         <div className="content fade-step" key={phaseKey}>
-          <div className="card">
-            <h3>Tour de description</h3>
-            <p>
+          <div className="card hero">
+            <span className="game-emoji big">🗣️</span>
+            <h2>Tour {phase.turn}</h2>
+            <p className="muted">
               <strong>{starter}</strong> commence, puis on tourne. Un mot par joueur, sans dire son mot.
             </p>
+            <div className="row wrap chips center">
+              <span className="badge accent">{plural(alive.length, 'joueur')} en vie</span>
+              {assignments.length > alive.length && (
+                <span className="badge">{plural(assignments.length - alive.length, 'éliminé')}</span>
+              )}
+            </div>
           </div>
           <div className="card">
             <h3>Vote : qui est éliminé ?</h3>
@@ -318,9 +330,15 @@ export default function UndercoverGame({ session, onFinish, onQuit }: GameProps)
 
   if (phase.name === 'eliminated') {
     const a = assignments.find((x) => x.playerId === phase.playerId)!
+    const suite =
+      a.role === 'mrwhite'
+        ? 'Dernière chance de Mr White'
+        : checkEnd(assignments)
+          ? 'Voir le résultat'
+          : `Lancer le tour ${turnOf(assignments)}`
     return (
       <div className="app">
-        <TopBar title="Élimination" />
+        <TopBar title="Élimination" subtitle={`Tour ${turnOf(assignments) - 1} terminé`} />
         <div className="content fade-step" key={phaseKey}>
           <p className="big-name">{a.name}</p>
           <div className="reveal">
@@ -330,7 +348,7 @@ export default function UndercoverGame({ session, onFinish, onQuit }: GameProps)
             </div>
           </div>
           <button className="primary big block" onClick={() => afterElimination(phase.playerId)}>
-            Continuer
+            {suite}
           </button>
         </div>
       </div>

@@ -58,8 +58,10 @@ passe la carte en rouge.
 ### Undercover
 
 Chaque joueur découvre son mot en privé, puis on décrit son mot à tour de rôle sans le prononcer.
-Vote, élimination, révélation du rôle. Un Mr White éliminé peut tenter de deviner le mot des civils
-pour voler la victoire. Les infiltrés gagnent dès qu'ils sont aussi nombreux que les civils.
+Vote, élimination, révélation du rôle — et on **enchaîne sur le tour suivant avec les mêmes mots**,
+jusqu'à ce qu'un camp l'emporte. L'app numérote les tours et annonce le suivant sur l'écran
+d'élimination. Un Mr White éliminé peut tenter de deviner le mot des civils pour voler la victoire.
+Les infiltrés gagnent dès qu'ils sont aussi nombreux que les civils.
 
 Les mots sont tirés au sort et **jamais affichés avant la distribution** : celui qui lance la partie
 peut donc jouer, il ne les connaît pas. On peut retirer une autre paire à l'aveugle.
