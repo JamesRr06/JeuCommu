@@ -2,9 +2,16 @@ import { useMemo, useState, type ReactNode } from 'react'
 import { TopBar } from '../../components/UI'
 import DebateTimer from '../../components/Timer'
 import { haptic, plural, shuffle, uid } from '../../lib'
-import type { Camp, ID, LoupGarouConfig, PlayerResult, Round, Session } from '../../types'
+import {
+  DEFAULT_DEBATE_MINUTES,
+  type Camp,
+  type ID,
+  type LoupGarouConfig,
+  type PlayerResult,
+  type Round,
+} from '../../types'
 import { ROLES, type RoleId } from './roles'
-import { DEFAULT_DEBATE_MINUTES } from './config'
+import type { GameProps } from '../registry'
 
 interface LP {
   playerId: ID
@@ -134,15 +141,59 @@ function campOf(p: LP): Extract<Camp, 'village' | 'loups'> {
   return isWolf(p) ? 'loups' : 'village'
 }
 
-export default function LoupGarouGame({
-  session,
-  onFinish,
-  onQuit,
+/**
+ * Liste des joueurs, avec sélection. Définie au niveau du module : déclarée dans le
+ * composant, React la verrait comme un type différent à chaque rendu, remonterait
+ * toutes les lignes et rejouerait leur animation d'entrée à chaque sélection.
+ */
+function AliveList({
+  players,
+  target,
+  onSelect,
+  disabledIds = [],
+  onlyIds,
+  extra,
 }: {
-  session: Session
-  onFinish: (round: Round) => void
-  onQuit: () => void
+  players: LP[]
+  target: ID | null
+  onSelect: (id: ID) => void
+  disabledIds?: ID[]
+  onlyIds?: ID[]
+  extra?: (p: LP) => ReactNode
 }) {
+  const list = players.filter((p) => (onlyIds ? onlyIds.includes(p.playerId) : true))
+  return (
+    <div className="list">
+      {list.map((p) => (
+        <button
+          key={p.playerId}
+          className={`item${target === p.playerId ? ' selected' : ''}${p.alive ? '' : ' dead'}`}
+          disabled={!p.alive || disabledIds.includes(p.playerId)}
+          onClick={() => onSelect(p.playerId)}
+        >
+          <span className="grow">{p.name}</span>
+          {p.alive && extra?.(p)}
+          {p.alive && p.publicCard && <span className="badge success">innocent</span>}
+          {p.alive && p.mute && <span className="badge warn">muet</span>}
+          {p.alive && p.noVote && <span className="badge warn">sans voix</span>}
+          {!p.alive && <span className="badge danger">mort</span>}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/** La cible et ses deux voisins vivants, dans l'ordre de la table. */
+function foxGroup(players: LP[], targetId: ID): LP[] {
+  const order = players.filter((p) => p.alive)
+  const i = order.findIndex((p) => p.playerId === targetId)
+  if (i < 0) return []
+  const n = order.length
+  const group = [order[(i - 1 + n) % n], order[i], order[(i + 1) % n]]
+  return group.filter((p, idx) => group.findIndex((x) => x.playerId === p.playerId) === idx)
+}
+
+export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) {
   // --- Composition : définie dans les réglages de la session ---
   const config = session.config as LoupGarouConfig
   const nbPlayers = session.players.length
@@ -156,7 +207,8 @@ export default function LoupGarouGame({
   const [steps, setSteps] = useState<StepId[]>([])
   const [nightNo, setNightNo] = useState(0)
   const [target, setTarget] = useState<ID | null>(null)
-  const [pair, setPair] = useState<ID[]>([])
+  /** Sélection multiple partagée par Cupidon et par le Bouc Émissaire. */
+  const [selection, setSelection] = useState<ID[]>([])
 
   const [victimId, setVictimId] = useState<ID | null>(null)
   const [protectedId, setProtectedId] = useState<ID | null>(null)
@@ -449,7 +501,7 @@ export default function LoupGarouGame({
       setBoucTie(false)
       const bouc = list.find((p) => died.includes(p.playerId) && p.role === 'bouc')
       if (bouc) {
-        setPair([])
+        setSelection([])
         setPhase({ name: 'bouc', playerId: bouc.playerId })
         return
       }
@@ -536,37 +588,6 @@ export default function LoupGarouGame({
       ✕
     </button>
   )
-
-  function AliveList({
-    disabledIds = [],
-    onlyIds,
-    extra,
-  }: {
-    disabledIds?: ID[]
-    onlyIds?: ID[]
-    extra?: (p: LP) => ReactNode
-  }) {
-    const list = players.filter((p) => (onlyIds ? onlyIds.includes(p.playerId) : true))
-    return (
-      <div className="list">
-        {list.map((p) => (
-          <button
-            key={p.playerId}
-            className={`item${target === p.playerId ? ' selected' : ''}${p.alive ? '' : ' dead'}`}
-            disabled={!p.alive || disabledIds.includes(p.playerId)}
-            onClick={() => setTarget(p.playerId)}
-          >
-            <span className="grow">{p.name}</span>
-            {p.alive && extra?.(p)}
-            {p.alive && p.publicCard && <span className="badge success">innocent</span>}
-            {p.alive && p.mute && <span className="badge warn">muet</span>}
-            {p.alive && p.noVote && <span className="badge warn">sans voix</span>}
-            {!p.alive && <span className="badge danger">mort</span>}
-          </button>
-        ))}
-      </div>
-    )
-  }
 
   // ---------- Écrans ----------
 
@@ -762,7 +783,7 @@ export default function LoupGarouGame({
 
     if (step === 'cupidon') {
       const toggle = (id: ID) =>
-        setPair((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : cur.length < 2 ? [...cur, id] : cur))
+        setSelection((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : cur.length < 2 ? [...cur, id] : cur))
       return (
         <div className="app night">
           <TopBar title={STEP_TITLE.cupidon} subtitle={`Nuit ${nightNo}`} right={quitButton} />
@@ -774,7 +795,7 @@ export default function LoupGarouGame({
               {alive.map((p) => (
                 <button
                   key={p.playerId}
-                  className={`item${pair.includes(p.playerId) ? ' selected' : ''}`}
+                  className={`item${selection.includes(p.playerId) ? ' selected' : ''}`}
                   onClick={() => toggle(p.playerId)}
                 >
                   <span className="grow">{p.name}</span>
@@ -785,9 +806,9 @@ export default function LoupGarouGame({
           <div className="footer-actions">
             <button
               className="primary big block"
-              disabled={pair.length !== 2}
+              disabled={selection.length !== 2}
               onClick={() => {
-                setPlayers((list) => list.map((p) => (pair.includes(p.playerId) ? { ...p, lover: true } : p)))
+                setPlayers((list) => list.map((p) => (selection.includes(p.playerId) ? { ...p, lover: true } : p)))
                 setPhase({ name: 'lovers', resumeIdx: phase.idx + 1, index: 0, revealed: false })
               }}
             >
@@ -807,7 +828,7 @@ export default function LoupGarouGame({
             <Emblem icon={STEP_ICON.sauvage} />
             <p className="step-title">L’Enfant Sauvage choisit son modèle</p>
             <p className="muted">Tant que son modèle vit, il reste villageois. S’il meurt, l’enfant rejoint la meute.</p>
-            <AliveList disabledIds={[child.playerId]} />
+            <AliveList players={players} target={target} onSelect={setTarget} disabledIds={[child.playerId]} />
           </div>
           <div className="footer-actions">
             <button
@@ -869,7 +890,7 @@ export default function LoupGarouGame({
             {lastProtectedId && (
               <p className="muted">Interdit cette nuit : {byId(lastProtectedId)?.name} (protégé la nuit dernière).</p>
             )}
-            <AliveList disabledIds={lastProtectedId ? [lastProtectedId] : []} />
+            <AliveList players={players} target={target} onSelect={setTarget} disabledIds={lastProtectedId ? [lastProtectedId] : []} />
           </div>
           <div className="footer-actions">
             <button
@@ -895,7 +916,7 @@ export default function LoupGarouGame({
             <Emblem icon={STEP_ICON.voyante} />
             <p className="step-title">La Voyante sonde un joueur</p>
             <p className="muted">Passe-lui le téléphone : elle choisit, découvre le rôle, puis rend l’appareil.</p>
-            <AliveList />
+            <AliveList players={players} target={target} onSelect={setTarget} />
           </div>
           <div className="footer-actions">
             <button
@@ -920,14 +941,14 @@ export default function LoupGarouGame({
             <p className="muted">
               Il désigne un joueur : l’app examine ce joueur et ses deux voisins vivants, dans l’ordre de la table.
             </p>
-            <AliveList />
+            <AliveList players={players} target={target} onSelect={setTarget} />
           </div>
           <div className="footer-actions">
             <button
               className="primary big block"
               disabled={!target}
               onClick={() => {
-                const group = foxGroup(target!)
+                const group = foxGroup(players, target!)
                 const found = group.some(isWolf)
                 if (!found) setFoxLost(true)
                 setPhase({ name: 'renard-reveal', idx: phase.idx, targetId: target!, found })
@@ -1010,7 +1031,7 @@ export default function LoupGarouGame({
             <Emblem icon={STEP_ICON.loups} />
             <p className="step-title">Les loups choisissent leur victime</p>
             <p className="muted">Meute réveillée : {wolfNames || 'aucun loup en vie'}</p>
-            <AliveList disabledIds={wolfIds} />
+            <AliveList players={players} target={target} onSelect={setTarget} disabledIds={wolfIds} />
           </div>
           <div className="footer-actions">
             <button
@@ -1042,7 +1063,7 @@ export default function LoupGarouGame({
             {preys.length === 0 ? (
               <p className="muted center-text">Aucun autre loup en vie.</p>
             ) : (
-              <AliveList onlyIds={preys.map((p) => p.playerId)} />
+              <AliveList players={players} target={target} onSelect={setTarget} onlyIds={preys.map((p) => p.playerId)} />
             )}
           </div>
           <div className="footer-actions">
@@ -1072,7 +1093,7 @@ export default function LoupGarouGame({
             <Emblem icon={STEP_ICON.corbeau} />
             <p className="step-title">Le Corbeau désigne sa cible</p>
             <p className="muted">Elle commencera la journée avec deux voix contre elle.</p>
-            <AliveList />
+            <AliveList players={players} target={target} onSelect={setTarget} />
           </div>
           <div className="footer-actions">
             <button className="ghost" onClick={() => goToStep(phase.idx + 1)}>
@@ -1252,7 +1273,7 @@ export default function LoupGarouGame({
   }
 
   if (phase.name === 'renard-reveal') {
-    const group = foxGroup(phase.targetId)
+    const group = foxGroup(players, phase.targetId)
     return (
       <div className="app night">
         <TopBar title="Le flair du Renard" />
@@ -1295,7 +1316,7 @@ export default function LoupGarouGame({
           {remaining.length === 0 ? (
             <p className="muted center-text">Toutes les cartes ont été consultées.</p>
           ) : (
-            <AliveList disabledIds={[singe.playerId, ...phase.seen]} />
+            <AliveList players={players} target={target} onSelect={setTarget} disabledIds={[singe.playerId, ...phase.seen]} />
           )}
         </div>
         <div className="footer-actions">
@@ -1385,7 +1406,7 @@ export default function LoupGarouGame({
         <TopBar title="Potion de mort" />
         <div className="content fade-step" key={phaseKey}>
           <p className="step-title">Qui la Sorcière empoisonne-t-elle ?</p>
-          <AliveList />
+          <AliveList players={players} target={target} onSelect={setTarget} />
         </div>
         <div className="footer-actions">
           <button className="ghost" onClick={() => setPhase({ name: 'step', idx: phase.idx })}>
@@ -1674,7 +1695,7 @@ export default function LoupGarouGame({
         <div className="content fade-step" key={phaseKey}>
           <p className="step-title">{hunter.name} pouvait tirer</p>
           <p className="muted">Il emporte un joueur de son choix dans la tombe.</p>
-          <AliveList />
+          <AliveList players={players} target={target} onSelect={setTarget} />
         </div>
         <div className="footer-actions">
           <button className="primary big block" disabled={!target} onClick={() => hunterShoot(phase.next)}>
@@ -1711,7 +1732,7 @@ export default function LoupGarouGame({
 
   if (phase.name === 'bouc') {
     const bouc = byId(phase.playerId)!
-    const toggle = (id: ID) => setPair((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]))
+    const toggle = (id: ID) => setSelection((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]))
     return (
       <div className="app day">
         <TopBar title="Le Bouc Émissaire" right={quitButton} />
@@ -1722,11 +1743,11 @@ export default function LoupGarouGame({
             {alive.map((p) => (
               <button
                 key={p.playerId}
-                className={`item${pair.includes(p.playerId) ? ' selected' : ''}`}
+                className={`item${selection.includes(p.playerId) ? ' selected' : ''}`}
                 onClick={() => toggle(p.playerId)}
               >
                 <span className="grow">{p.name}</span>
-                <span className="badge">{pair.includes(p.playerId) ? 'privé de vote' : 'vote'}</span>
+                <span className="badge">{selection.includes(p.playerId) ? 'privé de vote' : 'vote'}</span>
               </button>
             ))}
           </div>
@@ -1735,8 +1756,8 @@ export default function LoupGarouGame({
           <button
             className="primary big block"
             onClick={() => {
-              setBanned({ day: nightNo + 1, ids: pair })
-              setPair([])
+              setBanned({ day: nightNo + 1, ids: selection })
+              setSelection([])
               afterVote(players)
             }}
           >
@@ -1801,7 +1822,7 @@ export default function LoupGarouGame({
             )}
           </div>
           {debateMinutes > 0 && <DebateTimer key={`debat-${nightNo}-${judgeUsed}`} minutes={debateMinutes} />}
-          <AliveList
+          <AliveList players={players} target={target} onSelect={setTarget}
             extra={(p) => (
               <>
                 {p.playerId === crowId && <span className="badge danger">+2 voix</span>}
@@ -1886,14 +1907,4 @@ export default function LoupGarouGame({
       </div>
     </div>
   )
-
-  /** La cible et ses deux voisins vivants, dans l'ordre de la table. */
-  function foxGroup(targetId: ID): LP[] {
-    const order = players.filter((p) => p.alive)
-    const i = order.findIndex((p) => p.playerId === targetId)
-    if (i < 0) return []
-    const n = order.length
-    const group = [order[(i - 1 + n) % n], order[i], order[(i + 1) % n]]
-    return group.filter((p, idx) => group.findIndex((x) => x.playerId === p.playerId) === idx)
-  }
 }

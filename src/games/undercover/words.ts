@@ -2,7 +2,7 @@
  * Paires de mots pour Undercover : [mot des civils, mot de l'undercover].
  * Les deux mots doivent être proches mais distinguables par une description fine.
  */
-export type WordPair = readonly [string, string]
+type WordPair = readonly [string, string]
 
 export const WORD_PAIRS: WordPair[] = [
   ['Chat', 'Chien'],

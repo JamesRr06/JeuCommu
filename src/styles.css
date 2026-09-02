@@ -285,7 +285,7 @@ button.item:active { transform: scale(.99); }
 .badge.danger { border-color: var(--danger); color: var(--danger); }
 .badge.warn { border-color: var(--gold-dim); color: var(--gold); }
 
-.rank-num {
+.num-badge {
   width: 30px; height: 30px; flex: none;
   display: grid; place-items: center;
   border-radius: 999px;
@@ -294,9 +294,9 @@ button.item:active { transform: scale(.99); }
   color: var(--muted);
   font-size: 14px; font-weight: 700;
 }
-.rank-num.gold { background: var(--gold); border-color: var(--gold-bright); color: #14100a; }
-.rank-num.silver { background: transparent; border-color: var(--gold-dim); color: var(--gold); }
-.rank-num.bronze { background: transparent; border-color: var(--line-strong); color: var(--text); }
+.num-badge.gold { background: var(--gold); border-color: var(--gold-bright); color: #14100a; }
+.num-badge.silver { background: transparent; border-color: var(--gold-dim); color: var(--gold); }
+.num-badge.bronze { background: transparent; border-color: var(--line-strong); color: var(--text); }
 
 /* ---------- Ecrans de jeu ---------- */
 

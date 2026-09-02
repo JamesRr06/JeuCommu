@@ -4,7 +4,7 @@ import type { GameConfig, UndercoverConfig } from '../../types'
 import type { ConfigEditorProps } from '../registry'
 
 /** Nombre maximum d'infiltrés : le camp des civils doit rester majoritaire. */
-export function maxInfiltres(playerCount: number): number {
+function maxInfiltres(playerCount: number): number {
   return Math.max(1, Math.floor((playerCount - 1) / 2))
 }
 
@@ -19,9 +19,6 @@ export function suggest(playerCount: number): UndercoverConfig {
   return { nbUndercover, nbMrWhite: Math.min(nbMrWhite, Math.max(0, max - nbUndercover)) }
 }
 
-export function defaultConfig(playerCount: number): UndercoverConfig {
-  return suggest(playerCount)
-}
 
 export function validate(playerCount: number, config: GameConfig): string | null {
   const c = config as UndercoverConfig

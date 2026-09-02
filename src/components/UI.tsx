@@ -36,8 +36,8 @@ export function TopBar({
   )
 }
 
-/** Engrenage d'accès aux réglages, présent dans la barre de titre de tous les écrans. */
-export function GearButton({ onClick }: { onClick: () => void }) {
+/** Engrenage d'accès aux réglages, posé automatiquement par la barre de titre. */
+function GearButton({ onClick }: { onClick: () => void }) {
   return (
     <button className="icon gear" onClick={onClick} aria-label="Réglages">
       ⚙
@@ -218,7 +218,7 @@ export function PlayerEditor({
         <div className="list">
           {players.map((p, i) => (
             <div key={p.id} className="item">
-              <span className="rank-num">{i + 1}</span>
+              <span className="num-badge">{i + 1}</span>
               <span className="grow">{p.name}</span>
               <button
                 className="small ghost"

@@ -1,6 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import { uid } from './lib'
 import {
+  DEFAULT_DEBATE_MINUTES,
   DEFAULT_SCORING,
   MAX_PLAYERS,
   type GameConfig,
@@ -12,6 +13,7 @@ import {
   type Round,
   type Scoring,
   type Session,
+  type UndercoverConfig,
 } from './types'
 
 const KEY = 'jeucommu.v1'
@@ -34,6 +36,24 @@ function mergeScoring(scoring: Partial<Scoring> | undefined): Scoring {
   return merged
 }
 
+/**
+ * Complète les réglages d'une session relue du stockage : chaque champ ajouté
+ * depuis reçoit une valeur, et la forme dépend du jeu — une session Loup-Garou
+ * ne doit jamais hériter d'une config d'Undercover.
+ */
+function migrateConfig(gameId: GameId, config: unknown): GameConfig {
+  if (gameId === 'loupgarou') {
+    const c = (config ?? {}) as Partial<LoupGarouConfig>
+    return {
+      nbLoups: c.nbLoups ?? 2,
+      specials: c.specials ?? [],
+      debateMinutes: c.debateMinutes ?? DEFAULT_DEBATE_MINUTES,
+    }
+  }
+  const c = (config ?? {}) as Partial<UndercoverConfig>
+  return { nbUndercover: c.nbUndercover ?? 1, nbMrWhite: c.nbMrWhite ?? 0 }
+}
+
 function load(): State {
   try {
     const raw = localStorage.getItem(KEY)
@@ -46,12 +66,7 @@ function load(): State {
       s.players ??= []
       s.gameId ??= s.rounds[0]?.gameId ?? 'undercover'
       s.scoring = mergeScoring(s.scoring)
-      s.config ??= { nbUndercover: 1, nbMrWhite: 0 }
-      // Le minuteur de débat est arrivé après les premières sessions Loup-Garou.
-      if (s.gameId === 'loupgarou') {
-        const config = s.config as LoupGarouConfig
-        config.debateMinutes ??= 5
-      }
+      s.config = migrateConfig(s.gameId, s.config)
     }
     return { sessions: parsed.sessions, defaults: mergeScoring(parsed.defaults) }
   } catch {
@@ -155,6 +170,7 @@ export function renameSession(id: ID, name: string) {
 }
 
 export function addPlayer(sessionId: ID, name: string): boolean {
+  ensureLoaded()
   const trimmed = name.trim()
   if (!trimmed) return false
   const session = state.sessions.find((s) => s.id === sessionId)
@@ -223,7 +239,11 @@ export function ranking(session: Session): RankRow[] {
   }
 
   const sorted = [...rows.values()].sort(
-    (a, b) => b.points - a.points || b.wins - a.wins || a.played - b.played || a.player.name.localeCompare(b.player.name),
+    (a, b) =>
+      b.points - a.points ||
+      b.wins - a.wins ||
+      a.played - b.played ||
+      a.player.name.localeCompare(b.player.name),
   )
 
   let lastKey = ''

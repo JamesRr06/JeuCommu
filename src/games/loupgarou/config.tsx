@@ -1,10 +1,8 @@
 import { Counter, InfoTip } from '../../components/UI'
 import { plural } from '../../lib'
-import type { GameConfig, LoupGarouConfig } from '../../types'
+import { DEFAULT_DEBATE_MINUTES, type GameConfig, type LoupGarouConfig } from '../../types'
 import type { ConfigEditorProps } from '../registry'
 import { OPTIONAL_ROLES, ROLES, type RoleId } from './roles'
-
-export const DEFAULT_DEBATE_MINUTES = 5
 
 /**
  * Compositions conseillées par effectif, dans l'esprit des parties équilibrées :
@@ -27,9 +25,6 @@ export function suggest(playerCount: number): LoupGarouConfig {
   return { nbLoups: Math.max(1, row.nbLoups), specials, debateMinutes: DEFAULT_DEBATE_MINUTES }
 }
 
-export function defaultConfig(playerCount: number): LoupGarouConfig {
-  return suggest(playerCount)
-}
 
 export function validate(playerCount: number, config: GameConfig): string | null {
   const c = config as LoupGarouConfig
@@ -94,7 +89,7 @@ export function ConfigEditor({ playerCount, config, onChange }: ConfigEditorProp
 
       <div className="card">
         <h3>Rôles spéciaux</h3>
-<div className="list">
+        <div className="list">
           {OPTIONAL_ROLES.map((r) => {
             const included = c.specials.includes(r)
             return (

@@ -86,7 +86,8 @@ souris, appui au doigt, et le détail complet du rôle tel que l'app le joue s'a
 - **Idiot du Village** — le premier vote qui le condamne retourne sa carte : il est épargné, mais perd son
   droit de vote (badge « sans voix »). Un second vote l'élimine pour de bon.
 - **Servante Dévouée** — à chaque vague de morts, elle peut prendre la place d'un éliminé **sans voir sa
-  carte**. Elle en hérite (potions et tir remis à neuf) et le rôle du mort n'est jamais révélé. Une fois.
+  carte**. Elle hérite du rôle et de ses pouvoirs — les potions déjà bues restent bues, mais son tir de
+  Chasseur est intact — et le rôle du mort n'est jamais révélé. Une seule fois dans la partie.
 
 *Information*
 

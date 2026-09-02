@@ -1,14 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
+import { haptic } from '../lib'
 
 /** Signal de fin de débat : vibration + trois bips, tout ce dont dispose une app hors ligne. */
 function ringEnd() {
+  haptic([220, 120, 220, 120, 450])
   try {
-    navigator.vibrate?.([220, 120, 220, 120, 450])
-  } catch {
-    /* vibreur indisponible */
-  }
-  try {
-    const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext
+    const legacy = window as unknown as { webkitAudioContext?: typeof AudioContext }
+    const Ctx = window.AudioContext ?? legacy.webkitAudioContext
     if (!Ctx) return
     const ctx = new Ctx()
     void ctx.resume()
@@ -48,14 +46,15 @@ export default function DebateTimer({ minutes }: { minutes: number }) {
   const rang = useRef(false)
 
   const running = pausedMs === null
-  useEffect(() => {
-    if (!running) return
-    const id = setInterval(() => tick((n) => n + 1), 250)
-    return () => clearInterval(id)
-  }, [running])
-
   const remaining = pausedMs ?? Math.max(0, endAt - Date.now())
   const over = remaining === 0
+
+  // Inutile de continuer à battre une fois en pause ou le temps écoulé.
+  useEffect(() => {
+    if (!running || over) return
+    const id = setInterval(() => tick((n) => n + 1), 250)
+    return () => clearInterval(id)
+  }, [running, over])
 
   useEffect(() => {
     if (over && !rang.current) {

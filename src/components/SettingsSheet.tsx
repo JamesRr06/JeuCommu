@@ -1,10 +1,11 @@
 import type { ReactNode } from 'react'
 import { PlayerEditor, Sheet } from './UI'
 import ConfigSuggestion from './ConfigSuggestion'
+import ScoringEditor from './ScoringEditor'
 import { GAMES, type GameDef } from '../games/registry'
 import type { GameConfig, Player, Scoring } from '../types'
 
-export interface SettingsSheetProps {
+interface SettingsSheetProps {
   onClose: () => void
   subtitle?: string
   /** Nom de la session, quand il y en a une. */
@@ -35,14 +36,6 @@ export default function SettingsSheet({
   scoring,
   footer,
 }: SettingsSheetProps) {
-  const games = game ? [game] : GAMES
-
-  function setPoints(gameId: string, camp: string, value: number) {
-    const next = structuredClone(scoring.value)
-    next[gameId as keyof Scoring][camp] = Math.max(0, value)
-    scoring.onChange(next)
-  }
-
   return (
     <Sheet title="Réglages" subtitle={subtitle} onClose={onClose}>
       {name && (
@@ -78,30 +71,12 @@ export default function SettingsSheet({
         </>
       )}
 
-      {games.map((g) => (
-        <div key={g.id} className="card">
-          <h3>
-            {scoring.label} — {g.name}
-          </h3>
-          {g.camps.map((camp) => (
-            <div key={camp.key} className="row between">
-              <span>{camp.label}</span>
-              <input
-                className="num"
-                type="number"
-                min={0}
-                inputMode="numeric"
-                value={scoring.value[g.id][camp.key] ?? 0}
-                onChange={(e) => setPoints(g.id, camp.key, Number(e.target.value) || 0)}
-              />
-            </div>
-          ))}
-        </div>
-      ))}
-
-      <p className="muted center-text">
-        Les points sont figés au moment où une partie est enregistrée : modifier le barème n’altère pas l’historique.
-      </p>
+      <ScoringEditor
+        games={game ? [game] : GAMES}
+        label={scoring.label}
+        scoring={scoring.value}
+        onChange={scoring.onChange}
+      />
 
       {footer}
     </Sheet>

@@ -1,8 +1,8 @@
 import type { GameConfig } from '../types'
 import type { GameDef } from '../games/registry'
 
-/** Comparaison tolérante à l'ordre des listes (les rôles spéciaux notamment). */
-function normalize(config: GameConfig): string {
+/** Empreinte d'une composition, tolérante à l'ordre des listes (les rôles spéciaux notamment). */
+function signature(config: GameConfig): string {
   const entries = Object.entries(config as unknown as Record<string, unknown>)
     .map(([k, v]) => [k, Array.isArray(v) ? [...v].sort() : v] as const)
     .sort(([a], [b]) => a.localeCompare(b))
@@ -26,7 +26,7 @@ export default function ConfigSuggestion({
 }) {
   if (playerCount < game.minPlayers) return null
   const suggested = game.suggest(playerCount)
-  const applied = normalize(config) === normalize(suggested)
+  const applied = signature(config) === signature(suggested)
 
   return (
     <div className="card suggestion">

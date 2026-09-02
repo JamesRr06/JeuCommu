@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react'
 import { TopBar } from '../../components/UI'
 import { haptic, normalize, pick, plural, shuffle, uid } from '../../lib'
-import type { Camp, ID, PlayerResult, Round, Session, UndercoverConfig } from '../../types'
+import type { Camp, ID, PlayerResult, Round, UndercoverConfig } from '../../types'
+import type { GameProps } from '../registry'
 import { WORD_PAIRS } from './words'
 
 type UndercoverRole = 'civil' | 'undercover' | 'mrwhite'
@@ -41,15 +42,7 @@ type Phase =
   | { name: 'guess'; playerId: ID }
   | { name: 'result'; winner: Camp; reason: string }
 
-export default function UndercoverGame({
-  session,
-  onFinish,
-  onQuit,
-}: {
-  session: Session
-  onFinish: (round: Round) => void
-  onQuit: () => void
-}) {
+export default function UndercoverGame({ session, onFinish, onQuit }: GameProps) {
   // Composition et effectif viennent des réglages de la session.
   const config = session.config as UndercoverConfig
   const nbPlayers = session.players.length

@@ -197,7 +197,7 @@ export const ROLES: Record<RoleId, RoleDef> = {
     description:
       'Avant qu’une carte éliminée ne soit révélée, tu peux prendre sa place et hériter de son rôle.',
     details:
-      'À chaque vague de morts, l’app lui propose de prendre la place d’un des éliminés : elle hérite de son rôle (pouvoirs compris, potions et tir remis à neuf) et la carte du mort n’est jamais révélée. Une seule fois dans la partie. Attention : si elle hérite d’une carte de loup, elle change de camp.',
+      'À chaque vague de morts, l’app lui propose de prendre la place d’un des éliminés, sans voir sa carte. Elle hérite du rôle et de ses pouvoirs — les potions déjà bues restent bues, mais son tir de Chasseur est intact — et la carte du mort n’est jamais révélée. Une seule fois dans la partie, et si elle hérite d’une carte de loup, elle change de camp.',
     unique: true,
   },
   voleur: {
@@ -298,6 +298,3 @@ export const OPTIONAL_ROLES: RoleId[] = [
   'comedien',
 ]
 
-export function roleCamp(id: RoleId): Extract<Camp, 'village' | 'loups'> {
-  return ROLES[id].camp
-}

@@ -26,10 +26,8 @@ export interface GameDef {
   /** Quelques points clés affichés sur la carte du menu. */
   highlights: string[]
   minPlayers: number
-  maxPlayersHint: number
   /** Camps rétribués, dans l'ordre d'affichage du barème. */
   camps: { key: string; label: string }[]
-  defaultConfig: (playerCount: number) => GameConfig
   /** Composition conseillée pour cet effectif, proposée au narrateur sans être imposée. */
   suggest: (playerCount: number) => GameConfig
   validate: (playerCount: number, config: GameConfig) => string | null
@@ -48,13 +46,11 @@ export const GAMES: GameDef[] = [
     tagline: 'Un mot pour les civils, un autre pour l’infiltré. Décris sans te faire démasquer.',
     highlights: ['Distribution des mots en privé', 'Vote et élimination', 'Mr White peut voler la victoire'],
     minPlayers: 3,
-    maxPlayersHint: 15,
     camps: [
       { key: 'civils', label: 'Civils' },
       { key: 'undercover', label: 'Undercover' },
       { key: 'mrwhite', label: 'Mr White' },
     ],
-    defaultConfig: undercoverConfig.defaultConfig,
     suggest: undercoverConfig.suggest,
     validate: undercoverConfig.validate,
     describe: undercoverConfig.describe,
@@ -68,14 +64,12 @@ export const GAMES: GameDef[] = [
     tagline: 'Nuits, pouvoirs et votes : le village contre la meute, guidé par l’app.',
     highlights: ['Narrateur guidé étape par étape', '24 rôles au choix', 'Morts et victoires calculées'],
     minPlayers: 4,
-    maxPlayersHint: 15,
     camps: [
       { key: 'village', label: 'Village' },
       { key: 'loups', label: 'Loups-Garous' },
       { key: 'amoureux', label: 'Amoureux' },
       { key: 'solitaire', label: 'Loup-Garou Blanc' },
     ],
-    defaultConfig: loupgarouConfig.defaultConfig,
     suggest: loupgarouConfig.suggest,
     validate: loupgarouConfig.validate,
     describe: loupgarouConfig.describe,

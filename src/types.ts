@@ -35,6 +35,8 @@ export interface LoupGarouConfig {
   debateMinutes: number
 }
 
+export const DEFAULT_DEBATE_MINUTES = 5
+
 /** Chaque jeu lit la variante qui le concerne (cast en tête de son composant). */
 export type GameConfig = UndercoverConfig | LoupGarouConfig
 
