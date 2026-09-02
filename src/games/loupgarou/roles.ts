@@ -9,6 +9,9 @@ export type RoleId =
   | 'cupidon'
   | 'petite_fille'
   | 'salvateur'
+  | 'marionnettiste'
+  | 'colosse'
+  | 'singe'
 
 export interface RoleDef {
   id: RoleId
@@ -76,10 +79,44 @@ export const ROLES: Record<RoleId, RoleDef> = {
     description: 'Chaque nuit, tu protèges un joueur des loups (jamais le même deux nuits de suite).',
     unique: true,
   },
+  marionnettiste: {
+    id: 'marionnettiste',
+    label: 'Marionnettiste',
+    camp: 'village',
+    description:
+      'Tu as une seconde vie : si les loups te dévorent, ta marionnette meurt à ta place. Tu restes en jeu, mais muet.',
+    unique: true,
+  },
+  colosse: {
+    id: 'colosse',
+    label: 'Colosse',
+    camp: 'village',
+    description:
+      'Si les loups te dévorent, tu te réveilles, découvres la meute et emportes l’un d’eux dans la tombe.',
+    unique: true,
+  },
+  singe: {
+    id: 'singe',
+    label: 'Singe Savant',
+    camp: 'village',
+    description:
+      'Une fois par partie, tu consultes autant de cartes que tu veux. Une carte de loup et ta curiosité te tue.',
+    unique: true,
+  },
 }
 
 /** Rôles spéciaux proposés dans l'écran de composition, dans l'ordre d'affichage. */
-export const OPTIONAL_ROLES: RoleId[] = ['voyante', 'sorciere', 'chasseur', 'cupidon', 'salvateur', 'petite_fille']
+export const OPTIONAL_ROLES: RoleId[] = [
+  'voyante',
+  'sorciere',
+  'chasseur',
+  'cupidon',
+  'salvateur',
+  'petite_fille',
+  'marionnettiste',
+  'colosse',
+  'singe',
+]
 
 export function roleCamp(id: RoleId): Extract<Camp, 'village' | 'loups'> {
   return ROLES[id].camp

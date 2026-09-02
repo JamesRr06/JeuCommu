@@ -63,7 +63,7 @@ export const GAMES: GameDef[] = [
     name: 'Loup-Garou',
     emoji: '🐺',
     tagline: 'Nuits, pouvoirs et votes : le village contre la meute, guidé par l’app.',
-    highlights: ['Narrateur guidé étape par étape', '8 rôles au choix', 'Morts et victoires calculées'],
+    highlights: ['Narrateur guidé étape par étape', '11 rôles au choix', 'Morts et victoires calculées'],
     minPlayers: 4,
     maxPlayersHint: 15,
     camps: [

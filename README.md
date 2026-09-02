@@ -50,6 +50,9 @@ Chaque joueur découvre son mot en privé, puis on décrit son mot à tour de r�
 Vote, élimination, révélation du rôle. Un Mr White éliminé peut tenter de deviner le mot des civils
 pour voler la victoire. Les infiltrés gagnent dès qu'ils sont aussi nombreux que les civils.
 
+Les mots sont tirés au sort et **jamais affichés avant la distribution** : celui qui lance la partie
+peut donc jouer, il ne les connaît pas. On peut retirer une autre paire à l'aveugle.
+
 ### Loup-Garou
 
 L'app distribue les rôles (les loups voient leur meute), puis guide le narrateur étape par étape :
@@ -57,7 +60,16 @@ Cupidon, Salvateur, Voyante, Loups, Sorcière — en n'affichant que les étapes
 Elle calcule les morts (protection, potions, chagrin des amoureux), déclenche le tir du Chasseur,
 gère le vote du jour et détecte la fin de partie.
 
-Rôles disponibles : Loup-Garou, Villageois, Voyante, Sorcière, Chasseur, Cupidon, Salvateur, Petite Fille.
+Rôles disponibles : Loup-Garou, Villageois, Voyante, Sorcière, Chasseur, Cupidon, Salvateur, Petite Fille,
+Marionnettiste, Colosse, Singe Savant.
+
+- **Marionnettiste** — seconde vie : dévoré par les loups, sa marionnette meurt à sa place. Il reste en jeu
+  mais devient muet (l'app le marque « muet » dans les listes) et ne communique plus que par gestes.
+- **Colosse** — dévoré par les loups, il se réveille, découvre la meute sur le téléphone et emporte
+  le loup de son choix dans la tombe.
+- **Singe Savant** — une fois dans la partie, il retourne autant de cartes qu'il veut, une par une, et
+  s'arrête quand il le souhaite. Une carte de Loup-Garou et il meurt (annoncé à l'aube). Il peut aussi
+  passer son tour pour garder son pouvoir pour une nuit suivante.
 
 ## Développement
 

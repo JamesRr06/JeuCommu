@@ -12,14 +12,17 @@ interface LP {
   lover: boolean
   /** Le chasseur n'a droit qu'à un seul tir. */
   hasShot: boolean
+  /** Marionnettiste ayant perdu sa marionnette : il survit, mais ne parle plus. */
+  mute: boolean
 }
 
-type StepId = 'cupidon' | 'salvateur' | 'voyante' | 'loups' | 'sorciere'
+type StepId = 'cupidon' | 'salvateur' | 'voyante' | 'singe' | 'loups' | 'sorciere'
 
 const STEP_TITLE: Record<StepId, string> = {
   cupidon: 'Cupidon',
   salvateur: 'Salvateur',
   voyante: 'Voyante',
+  singe: 'Le Singe Savant',
   loups: 'Les Loups-Garous',
   sorciere: 'La Sorcière',
 }
@@ -30,7 +33,11 @@ type Phase =
   | { name: 'night-intro' }
   | { name: 'step'; idx: number }
   | { name: 'voyante-reveal'; idx: number; targetId: ID }
+  | { name: 'singe-pick'; idx: number; seen: ID[] }
+  | { name: 'singe-reveal'; idx: number; seen: ID[]; targetId: ID }
   | { name: 'sorciere-kill'; idx: number }
+  | { name: 'puppet'; playerId: ID; pending: ID[] }
+  | { name: 'colosse'; playerId: ID; pending: ID[]; revealed: boolean }
   | { name: 'lovers'; resumeIdx: number; index: number; revealed: boolean }
   | { name: 'deaths'; ids: ID[]; context: 'dawn' | 'vote' | 'hunter'; next: 'day' | 'night' }
   | { name: 'hunter'; playerId: ID; next: 'day' | 'night' }
@@ -67,6 +74,10 @@ export default function LoupGarouGame({
   const [witchSaved, setWitchSaved] = useState(false)
   const [healUsed, setHealUsed] = useState(false)
   const [poisonUsed, setPoisonUsed] = useState(false)
+  /** Le Singe Savant n'ouvre les cartes qu'une seule fois dans la partie. */
+  const [singeUsed, setSingeUsed] = useState(false)
+  /** Singe démasqué par une carte de loup : sa mort est annoncée à l'aube. */
+  const [singeDeadId, setSingeDeadId] = useState<ID | null>(null)
 
   const alive = useMemo(() => players.filter((p) => p.alive), [players])
   const nbVillageois = Math.max(0, nbPlayers - nbLoups - specials.length)
@@ -89,6 +100,7 @@ export default function LoupGarouGame({
         alive: true,
         lover: false,
         hasShot: false,
+        mute: false,
       })),
     )
     setPhase({ name: 'deal', index: 0, revealed: false })
@@ -104,6 +116,7 @@ export default function LoupGarouGame({
     setWitchSaved(false)
     setLastProtectedId(protectedId)
     setProtectedId(null)
+    setSingeDeadId(null)
     setTarget(null)
 
     const s: StepId[] = []
@@ -111,6 +124,7 @@ export default function LoupGarouGame({
     if (n === 1 && hasAlive('cupidon')) s.push('cupidon')
     if (hasAlive('salvateur')) s.push('salvateur')
     if (hasAlive('voyante')) s.push('voyante')
+    if (hasAlive('singe') && !singeUsed) s.push('singe')
     s.push('loups')
     if (hasAlive('sorciere')) s.push('sorciere')
     setSteps(s)
@@ -127,11 +141,38 @@ export default function LoupGarouGame({
     setPhase({ name: 'step', idx })
   }
 
-  function dawn(victim: ID | null = victimId) {
+  function dawn(victim: ID | null = victimId, singeDead: ID | null = singeDeadId) {
     const dying: ID[] = []
     if (victim && !witchSaved && victim !== protectedId) dying.push(victim)
     if (witchKillId && !dying.includes(witchKillId)) dying.push(witchKillId)
-    const { list, died } = kill(players, dying)
+    if (singeDead && !dying.includes(singeDead)) dying.push(singeDead)
+
+    // Seule la victime des loups déclenche les pouvoirs de mort du Marionnettiste et du Colosse.
+    const devoured = victim && dying.includes(victim) ? byId(victim) : undefined
+
+    // La marionnette n'encaisse que l'attaque des loups : le poison de la Sorcière passe outre.
+    if (devoured?.role === 'marionnettiste' && !devoured.mute && witchKillId !== devoured.playerId) {
+      setPlayers((list) => list.map((p) => (p.playerId === devoured.playerId ? { ...p, mute: true } : p)))
+      setPhase({
+        name: 'puppet',
+        playerId: devoured.playerId,
+        pending: dying.filter((id) => id !== devoured.playerId),
+      })
+      return
+    }
+
+    if (devoured?.role === 'colosse' && players.some((p) => p.alive && p.role === 'loup')) {
+      setTarget(null)
+      setPhase({ name: 'colosse', playerId: devoured.playerId, pending: dying, revealed: false })
+      return
+    }
+
+    applyDawn(dying)
+  }
+
+  /** Applique les morts de la nuit et enchaîne sur l'écran d'aube. */
+  function applyDawn(ids: ID[]) {
+    const { list, died } = kill(players, ids)
     setPlayers(list)
     setPhase({ name: 'deaths', ids: died, context: 'dawn', next: 'day' })
   }
@@ -270,6 +311,7 @@ export default function LoupGarouGame({
             onClick={() => setTarget(p.playerId)}
           >
             <span className="grow">{p.name}</span>
+            {p.mute && p.alive && <span className="badge warn">muet</span>}
             {!p.alive && <span className="badge danger">mort</span>}
           </button>
         ))}
@@ -497,6 +539,42 @@ export default function LoupGarouGame({
       )
     }
 
+    if (step === 'singe') {
+      return (
+        <div className="app night">
+          <TopBar title={STEP_TITLE.singe} subtitle={`Nuit ${nightNo}`} right={quitButton} />
+          <div className="content">
+            <p className="step-title">Le Singe Savant ouvre les yeux</p>
+            <p className="muted">
+              Passe-lui le téléphone : il retourne les cartes une par une et s’arrête quand il le souhaite.
+              S’il tombe sur un Loup-Garou, sa curiosité lui coûte la vie.
+            </p>
+            <div className="card">
+              <h3>Une seule fois dans la partie</h3>
+              <p className="muted">
+                S’il passe son tour, il pourra encore utiliser son pouvoir lors d’une nuit suivante.
+              </p>
+            </div>
+          </div>
+          <div className="footer-actions">
+            <button className="ghost" onClick={() => goToStep(phase.idx + 1)}>
+              Passer
+            </button>
+            <button
+              className="primary big grow"
+              onClick={() => {
+                setSingeUsed(true)
+                setTarget(null)
+                setPhase({ name: 'singe-pick', idx: phase.idx, seen: [] })
+              }}
+            >
+              Consulter des cartes
+            </button>
+          </div>
+        </div>
+      )
+    }
+
     if (step === 'loups') {
       const wolfNames = wolves.filter((p) => p.alive).map((p) => p.name).join(', ')
       const wolfIds = wolves.map((p) => p.playerId)
@@ -590,6 +668,103 @@ export default function LoupGarouGame({
     )
   }
 
+  if (phase.name === 'singe-pick') {
+    const singe = players.find((p) => p.role === 'singe')!
+    const remaining = players.filter(
+      (p) => p.alive && p.playerId !== singe.playerId && !phase.seen.includes(p.playerId),
+    )
+    return (
+      <div className="app night">
+        <TopBar title="Cartes du village" subtitle={plural(phase.seen.length, 'carte consultée', 'cartes consultées')} />
+        <div className="content">
+          <p className="step-title">Quelle carte retourner ?</p>
+          {remaining.length === 0 ? (
+            <p className="muted center-text">Toutes les cartes ont été consultées.</p>
+          ) : (
+            <AliveList disabledIds={[singe.playerId, ...phase.seen]} />
+          )}
+        </div>
+        <div className="footer-actions">
+          <button
+            className="ghost"
+            onClick={() => {
+              setTarget(null)
+              goToStep(phase.idx + 1)
+            }}
+          >
+            S’arrêter là
+          </button>
+          <button
+            className="primary big grow"
+            disabled={!target}
+            onClick={() => setPhase({ name: 'singe-reveal', idx: phase.idx, seen: phase.seen, targetId: target! })}
+          >
+            Retourner la carte
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (phase.name === 'singe-reveal') {
+    const t = byId(phase.targetId)!
+    const caught = ROLES[t.role].camp === 'loups'
+    const seen = [...phase.seen, phase.targetId]
+    return (
+      <div className="app night">
+        <TopBar title="Carte retournée" subtitle={plural(seen.length, 'carte')} />
+        <div className="content">
+          <p className="big-name">{t.name}</p>
+          <div className="reveal">
+            <div>
+              <div className="role">{ROLES[t.role].label}</div>
+              <div className="muted">{caught ? 'Un Loup-Garou !' : 'Camp du village'}</div>
+            </div>
+          </div>
+          {caught ? (
+            <>
+              <p className="muted center-text">
+                La curiosité du Singe Savant lui coûte la vie. Sa mort sera annoncée à l’aube.
+              </p>
+              <button
+                className="primary big block"
+                onClick={() => {
+                  const singe = players.find((p) => p.role === 'singe')!
+                  setSingeDeadId(singe.playerId)
+                  setTarget(null)
+                  goToStep(phase.idx + 1)
+                }}
+              >
+                Refermer les yeux
+              </button>
+            </>
+          ) : (
+            <div className="stack">
+              <button
+                className="primary big block"
+                onClick={() => {
+                  setTarget(null)
+                  setPhase({ name: 'singe-pick', idx: phase.idx, seen })
+                }}
+              >
+                Retourner une autre carte
+              </button>
+              <button
+                className="block"
+                onClick={() => {
+                  setTarget(null)
+                  goToStep(phase.idx + 1)
+                }}
+              >
+                S’arrêter là
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    )
+  }
+
   if (phase.name === 'sorciere-kill') {
     return (
       <div className="app night">
@@ -660,6 +835,82 @@ export default function LoupGarouGame({
               </button>
             </>
           )}
+        </div>
+      </div>
+    )
+  }
+
+  if (phase.name === 'puppet') {
+    const p = byId(phase.playerId)!
+    return (
+      <div className="app day">
+        <TopBar title={`Aube du jour ${nightNo}`} right={quitButton} />
+        <div className="content">
+          <div className="card">
+            <h2>La marionnette tombe</h2>
+            <p className="muted">
+              Les loups ont désigné <strong>{p.name}</strong> : c’est sa marionnette qui est éliminée à sa place.
+            </p>
+            <p className="muted">
+              {p.name} reste dans la partie, mais ne peut plus prononcer un seul mot : uniquement des gestes.
+            </p>
+          </div>
+        </div>
+        <div className="footer-actions">
+          <button className="primary big block" onClick={() => applyDawn(phase.pending)}>
+            Continuer
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  if (phase.name === 'colosse') {
+    const colosse = byId(phase.playerId)!
+    const wolves = players.filter((p) => p.alive && p.role === 'loup')
+    if (!phase.revealed) {
+      return (
+        <div className="app night">
+          <TopBar title="Le Colosse se réveille" />
+          <div className="content">
+            <p className="muted center-text">Les loups ont dévoré le Colosse. Passe-lui le téléphone.</p>
+            <p className="big-name">{colosse.name}</p>
+            <div className="reveal">
+              <span className="muted">Il va découvrir ses assaillants et en emporter un.</span>
+            </div>
+            <button className="primary big block" onClick={() => setPhase({ ...phase, revealed: true })}>
+              Découvrir la meute
+            </button>
+          </div>
+        </div>
+      )
+    }
+    return (
+      <div className="app night">
+        <TopBar title="Le Colosse frappe" subtitle="Il en emporte un dans la tombe" />
+        <div className="content">
+          <p className="step-title">Quel Loup-Garou emporter ?</p>
+          <div className="list">
+            {wolves.map((p) => (
+              <button
+                key={p.playerId}
+                className={`item${target === p.playerId ? ' selected' : ''}`}
+                onClick={() => setTarget(p.playerId)}
+              >
+                <span className="grow">{p.name}</span>
+                <span className="badge danger">Loup-Garou</span>
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="footer-actions">
+          <button
+            className="primary big block"
+            disabled={!target}
+            onClick={() => applyDawn([...phase.pending, target!])}
+          >
+            L’emporter dans la tombe
+          </button>
         </div>
       </div>
     )

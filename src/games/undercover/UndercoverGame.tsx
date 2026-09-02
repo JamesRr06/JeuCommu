@@ -27,6 +27,12 @@ interface Assignment {
   alive: boolean
 }
 
+/** Tire une paire de mots au hasard, dans un sens ou dans l'autre. */
+function drawWords(): { civil: string; undercover: string } {
+  const [a, b] = pick(WORD_PAIRS)
+  return Math.random() < 0.5 ? { civil: a, undercover: b } : { civil: b, undercover: a }
+}
+
 type Phase =
   | { name: 'intro' }
   | { name: 'deal'; index: number; revealed: boolean }
@@ -48,11 +54,8 @@ export default function UndercoverGame({
   const config = session.config as UndercoverConfig
   const nbPlayers = session.players.length
 
-  const [words, setWords] = useState<{ civil: string; undercover: string }>(() => {
-    const [a, b] = pick(WORD_PAIRS)
-    return { civil: a, undercover: b }
-  })
-  const [swapWords, setSwapWords] = useState(false)
+  // Les mots ne sont jamais montrés avant la distribution : celui qui lance la partie ne doit pas les connaître.
+  const [words, setWords] = useState(drawWords)
 
   const [assignments, setAssignments] = useState<Assignment[]>([])
   const [phase, setPhase] = useState<Phase>({ name: 'intro' })
@@ -62,8 +65,8 @@ export default function UndercoverGame({
 
   const alive = useMemo(() => assignments.filter((a) => a.alive), [assignments])
 
-  const civilWord = swapWords ? words.undercover : words.civil
-  const undercoverWord = swapWords ? words.civil : words.undercover
+  const civilWord = words.civil
+  const undercoverWord = words.undercover
 
   function start() {
     const roles: UndercoverRole[] = []
@@ -182,29 +185,18 @@ export default function UndercoverGame({
           </div>
 
           <div className="card">
-            <h3>Mots de la manche</h3>
-            <div className="row between">
-              <span className="muted">Civils</span>
-              <strong>{civilWord}</strong>
+            <h3>Les mots</h3>
+            <div className="reveal" style={{ minHeight: 96 }}>
+              <span className="muted">
+                Cachés — celui qui lance la partie ne doit pas les connaître.
+              </span>
             </div>
-            <div className="row between">
-              <span className="muted">Undercover</span>
-              <strong>{undercoverWord}</strong>
-            </div>
-            <div className="row">
-              <button
-                className="grow small"
-                onClick={() => {
-                  const [a, b] = pick(WORD_PAIRS)
-                  setWords({ civil: a, undercover: b })
-                }}
-              >
-                Autres mots
-              </button>
-              <button className="grow small" onClick={() => setSwapWords((v) => !v)}>
-                Inverser
-              </button>
-            </div>
+            <p className="muted">
+              Chaque joueur découvrira le sien pendant la distribution, à l’abri des regards.
+            </p>
+            <button className="small block" onClick={() => setWords(drawWords())}>
+              Tirer une autre paire, sans la voir
+            </button>
           </div>
         </div>
         <div className="footer-actions">
