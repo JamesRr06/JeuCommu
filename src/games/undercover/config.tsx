@@ -35,7 +35,7 @@ export function describe(playerCount: number, config: GameConfig): string[] {
   const c = config as UndercoverConfig
   return [
     plural(Math.max(0, playerCount - c.nbUndercover - c.nbMrWhite), 'civil'),
-    plural(c.nbUndercover, 'undercover'),
+    plural(c.nbUndercover, 'undercover', 'undercover'),
     plural(c.nbMrWhite, 'Mr White', 'Mr White'),
   ]
 }

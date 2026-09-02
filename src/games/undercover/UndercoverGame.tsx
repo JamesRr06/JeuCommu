@@ -19,6 +19,13 @@ const ROLE_CAMP: Record<UndercoverRole, Camp> = {
   mrwhite: 'mrwhite',
 }
 
+/** Issue d'une partie : le camp affiché, et tous ceux qui marquent des points. */
+interface Victory {
+  winner: Camp
+  reason: string
+  scored: Camp[]
+}
+
 interface Assignment {
   playerId: ID
   name: string
@@ -40,7 +47,7 @@ type Phase =
   | { name: 'play'; turn: number }
   | { name: 'eliminated'; playerId: ID }
   | { name: 'guess'; playerId: ID }
-  | { name: 'result'; winner: Camp; reason: string }
+  | { name: 'result'; winner: Camp; reason: string; scored: Camp[] }
 
 export default function UndercoverGame({ session, onFinish, onQuit }: GameProps) {
   // Composition et effectif viennent des réglages de la session.
@@ -70,9 +77,9 @@ export default function UndercoverGame({ session, onFinish, onQuit }: GameProps)
     for (let i = 0; i < config.nbMrWhite; i++) roles.push('mrwhite')
     while (roles.length < nbPlayers) roles.push('civil')
 
-    const players = shuffle(session.players)
+    // Seuls les rôles sont mélangés : le téléphone tourne dans l'ordre de la table.
     const shuffledRoles = shuffle(roles)
-    const next: Assignment[] = players.map((p, i) => {
+    const next: Assignment[] = session.players.map((p, i) => {
       const role = shuffledRoles[i]
       return {
         playerId: p.id,
@@ -91,19 +98,24 @@ export default function UndercoverGame({ session, onFinish, onQuit }: GameProps)
     setPhase({ name: 'play', turn: 1 })
   }
 
-  /** Vérifie les conditions de victoire après une élimination. */
-  function checkEnd(list: Assignment[]): { winner: Camp; reason: string } | null {
+  /**
+   * Vérifie les conditions de victoire après une élimination.
+   * `scored` liste les camps qui marquent : à la parité les infiltrés l'emportent
+   * ensemble, Undercover et Mr White compris, chacun à son propre barème.
+   */
+  function checkEnd(list: Assignment[]): Victory | null {
     const aliveList = list.filter((a) => a.alive)
     const infiltres = aliveList.filter((a) => a.role !== 'civil')
     const civils = aliveList.filter((a) => a.role === 'civil')
     if (infiltres.length === 0) {
-      return { winner: 'civils', reason: 'Tous les infiltrés ont été démasqués.' }
+      return { winner: 'civils', reason: 'Tous les infiltrés ont été démasqués.', scored: ['civils'] }
     }
     if (infiltres.length >= civils.length) {
       const hasUndercover = infiltres.some((a) => a.role === 'undercover')
       return {
         winner: hasUndercover ? 'undercover' : 'mrwhite',
         reason: 'Les infiltrés sont aussi nombreux que les civils.',
+        scored: ['undercover', 'mrwhite'],
       }
     }
     return null
@@ -140,18 +152,23 @@ export default function UndercoverGame({ session, onFinish, onQuit }: GameProps)
 
   function submitGuess(correct: boolean) {
     if (correct) {
-      setPhase({ name: 'result', winner: 'mrwhite', reason: `Mr White a deviné le mot : ${civilWord}.` })
+      setPhase({
+        name: 'result',
+        winner: 'mrwhite',
+        reason: `Mr White a deviné le mot : ${civilWord}.`,
+        scored: ['mrwhite'],
+      })
     } else {
       resume()
     }
   }
 
-  function save(winner: Camp, reason: string) {
+  function save({ winner, reason, scored }: Victory) {
     const scoring = session.scoring.undercover
     const results: PlayerResult[] = assignments.map((a) => {
       const camp = ROLE_CAMP[a.role]
-      const won = camp === winner
-      const points = won ? scoring[a.role === 'civil' ? 'civils' : a.role === 'undercover' ? 'undercover' : 'mrwhite'] : 0
+      const won = scored.includes(camp)
+      const points = won ? (scoring[camp] ?? 0) : 0
       return { playerId: a.playerId, role: ROLE_LABEL[a.role], camp, won, points }
     })
     const round: Round = {
@@ -419,7 +436,7 @@ export default function UndercoverGame({ session, onFinish, onQuit }: GameProps)
           <div className="list">
             {assignments.map((a) => {
               const camp = ROLE_CAMP[a.role]
-              const won = camp === phase.winner
+              const won = phase.scored.includes(camp)
               return (
                 <div key={a.playerId} className="item">
                   <span className="grow">{a.name}</span>
@@ -437,7 +454,7 @@ export default function UndercoverGame({ session, onFinish, onQuit }: GameProps)
         <button className="ghost" onClick={onQuit}>
           Ignorer
         </button>
-        <button className="primary big grow" onClick={() => save(phase.winner, phase.reason)}>
+        <button className="primary big grow" onClick={() => save(phase)}>
           Enregistrer au classement
         </button>
       </div>

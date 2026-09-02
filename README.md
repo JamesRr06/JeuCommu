@@ -66,6 +66,10 @@ Les infiltrés gagnent dès qu'ils sont aussi nombreux que les civils.
 Les mots sont tirés au sort et **jamais affichés avant la distribution** : celui qui lance la partie
 peut donc jouer, il ne les connaît pas. On peut retirer une autre paire à l'aveugle.
 
+Côté points : quand les infiltrés atteignent la parité, **Undercover et Mr White marquent ensemble**,
+chacun à son barème. La devinette réussie de Mr White, elle, reste une victoire solitaire : lui seul
+marque.
+
 ### Loup-Garou
 
 L'app distribue les rôles (les loups voient leur meute), puis guide le narrateur étape par étape :
