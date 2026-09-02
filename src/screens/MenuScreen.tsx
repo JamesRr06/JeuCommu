@@ -23,7 +23,7 @@ export default function MenuScreen({
     <div className="app">
       <TopBar title="JeuCommu" subtitle="Jeux d’ambiance hors ligne" />
 
-      <div className="content">
+      <div className="content fade-step">
         <h2 className="section">Choisis un jeu</h2>
         {GAMES.map((g) => (
           <button key={g.id} className="game-card" onClick={() => onPick(g.id)}>

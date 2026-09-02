@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { TopBar } from '../../components/UI'
-import { normalize, pick, plural, shuffle, uid } from '../../lib'
+import { haptic, normalize, pick, plural, shuffle, uid } from '../../lib'
 import type { Camp, ID, PlayerResult, Round, Session, UndercoverConfig } from '../../types'
 import { WORD_PAIRS } from './words'
 
@@ -167,13 +167,16 @@ export default function UndercoverGame({
     onFinish(round)
   }
 
+  // Change à chaque écran : remonte le contenu et rejoue l'animation d'entrée.
+  const phaseKey = JSON.stringify(phase)
+
   // ---------- Écrans ----------
 
   if (phase.name === 'intro') {
     return (
       <div className="app">
         <TopBar title="Undercover" subtitle={`${plural(nbPlayers, 'joueur')} · prêt ?`} onBack={onQuit} />
-        <div className="content">
+        <div className="content fade-step" key={phaseKey}>
           <div className="card">
             <h3>Composition</h3>
             <div className="row wrap chips">
@@ -214,7 +217,7 @@ export default function UndercoverGame({
     return (
       <div className="app">
         <TopBar title="Distribution" subtitle={`${phase.index + 1} / ${assignments.length}`} />
-        <div className="content">
+        <div className="content fade-step" key={phaseKey}>
           {!phase.revealed ? (
             <>
               <p className="muted center-text">Passe le téléphone à</p>
@@ -224,7 +227,10 @@ export default function UndercoverGame({
               </div>
               <button
                 className="primary big block"
-                onClick={() => setPhase({ name: 'deal', index: phase.index, revealed: true })}
+                onClick={() => {
+                  haptic()
+                  setPhase({ name: 'deal', index: phase.index, revealed: true })
+                }}
               >
                 Voir mon mot
               </button>
@@ -277,7 +283,7 @@ export default function UndercoverGame({
             </button>
           }
         />
-        <div className="content">
+        <div className="content fade-step" key={phaseKey}>
           <div className="card">
             <h3>Tour de description</h3>
             <p>
@@ -302,7 +308,14 @@ export default function UndercoverGame({
           </div>
         </div>
         <div className="footer-actions">
-          <button className="primary big block" disabled={!target} onClick={eliminate}>
+          <button
+            className="primary big block"
+            disabled={!target}
+            onClick={() => {
+              haptic([18, 40, 18])
+              eliminate()
+            }}
+          >
             Éliminer
           </button>
         </div>
@@ -315,7 +328,7 @@ export default function UndercoverGame({
     return (
       <div className="app">
         <TopBar title="Élimination" />
-        <div className="content">
+        <div className="content fade-step" key={phaseKey}>
           <p className="big-name">{a.name}</p>
           <div className="reveal">
             <div>
@@ -337,7 +350,7 @@ export default function UndercoverGame({
     return (
       <div className="app">
         <TopBar title="Dernière chance" subtitle="Mr White devine le mot" />
-        <div className="content">
+        <div className="content fade-step" key={phaseKey}>
           <p className="big-name">{a.name}</p>
           <div className="card">
             <h3>Quel est le mot des civils ?</h3>
@@ -377,8 +390,9 @@ export default function UndercoverGame({
   return (
     <div className="app">
       <TopBar title="Fin de la partie" />
-      <div className="content">
-        <div className="card">
+      <div className="content fade-step" key={phaseKey}>
+        <div className="card victory">
+          <span className="trophy">🏆</span>
           <h2>
             Victoire :{' '}
             {phase.winner === 'civils' ? 'les Civils' : phase.winner === 'undercover' ? 'les Undercover' : 'Mr White'}

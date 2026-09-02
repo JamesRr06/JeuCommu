@@ -69,7 +69,7 @@ export default function SetupScreen({
       <div className="app">
         <TopBar title={`${game.emoji} ${game.name}`} subtitle="Qui joue ?" onBack={onBack} />
         <Stepper steps={STEPS} current={1} />
-        <div className="content">
+        <div className="content fade-step" key={step}>
           <div className="card">
             <h3>Nom de la session</h3>
             <input type="text" value={name} maxLength={40} onChange={(e) => setName(e.target.value)} />
@@ -114,7 +114,7 @@ export default function SetupScreen({
         onBack={() => onStep('players')}
       />
       <Stepper steps={STEPS} current={2} />
-      <div className="content">
+      <div className="content fade-step" key={step}>
         <ConfigSuggestion game={game} playerCount={players.length} config={config} onApply={editConfig} />
         <game.ConfigEditor playerCount={players.length} config={config} onChange={editConfig} />
 

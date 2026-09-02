@@ -60,7 +60,7 @@ export default function SessionScreen({
         ))}
       </div>
 
-      <div className="content">
+      <div className="content fade-step" key={tab}>
         {tab === 'partie' && (
           <>
             <div className="card hero">
@@ -117,13 +117,14 @@ export default function SessionScreen({
                       {r.rank}
                     </span>
                     <span className="grow">
+                      {r.rank <= 3 && <span className="medal">{['🥇', '🥈', '🥉'][r.rank - 1]} </span>}
                       {r.player.name}
                       <br />
                       <span className="muted">
                         {plural(r.wins, 'victoire')} / {plural(r.played, 'partie')}
                       </span>
                     </span>
-                    <span className="badge accent">{r.points} pts</span>
+                    <span className="badge accent">{r.points} {r.points > 1 ? 'pts' : 'pt'}</span>
                   </div>
                 ))}
               </div>

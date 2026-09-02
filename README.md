@@ -12,6 +12,9 @@ qu'on se passe entre joueurs.
   et un emblème par étape de nuit pour guider le narrateur d'un coup d'œil.
 - ⏱️ **Minuteur de débat** réglable (5 min par défaut) avec vibration et bips en fin de temps.
 - 🎯 **Compositions conseillées** selon le nombre de joueurs, proposées d'un bouton et jamais imposées.
+- ✨ Navigation **fluide** : les écrans glissent dans le sens de la navigation, les listes se déroulent en
+  cascade, les boutons répondent au doigt et les moments forts (révélation, élimination, victoire) sont
+  soulignés par une vibration courte et un reflet doré.
 - 💾 Tout est stocké **en local** sur le téléphone (aucun compte, aucun réseau).
 
 ## Télécharger l'APK

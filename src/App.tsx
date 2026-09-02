@@ -15,15 +15,27 @@ type View =
   | { name: 'session'; id: ID }
   | { name: 'game'; sessionId: ID }
 
+/** Sens de la navigation : l'écran entre par la droite, ou revient par la gauche. */
+function setDirection(dir: 'fwd' | 'back') {
+  document.documentElement.dataset.nav = dir
+}
+
 export default function App() {
   const [view, setView] = useState<View>({ name: 'menu' })
-  useAndroidBackButton(view, setView)
+
+  function go(next: View, dir: 'fwd' | 'back' = 'fwd') {
+    setDirection(dir)
+    setView(next)
+  }
+
+  useAndroidBackButton(view, go)
 
   if (view.name === 'menu') {
     return (
       <MenuScreen
-        onPick={(gameId) => setView({ name: 'setup', gameId, step: 'players' })}
-        onOpen={(id) => setView({ name: 'session', id })}
+        key="menu"
+        onPick={(gameId) => go({ name: 'setup', gameId, step: 'players' })}
+        onOpen={(id) => go({ name: 'session', id })}
       />
     )
   }
@@ -31,11 +43,12 @@ export default function App() {
   if (view.name === 'setup') {
     return (
       <SetupScreen
+        key={`setup-${view.gameId}`}
         gameId={view.gameId}
         step={view.step}
-        onStep={(step) => setView({ ...view, step })}
-        onBack={() => setView({ name: 'menu' })}
-        onCreated={(id) => setView({ name: 'session', id })}
+        onStep={(step) => go({ ...view, step }, step === 'players' ? 'back' : 'fwd')}
+        onBack={() => go({ name: 'menu' }, 'back')}
+        onCreated={(id) => go({ name: 'session', id })}
       />
     )
   }
@@ -43,46 +56,51 @@ export default function App() {
   if (view.name === 'session') {
     return (
       <SessionScreen
+        key={`session-${view.id}`}
         sessionId={view.id}
-        onBack={() => setView({ name: 'menu' })}
-        onLaunch={() => setView({ name: 'game', sessionId: view.id })}
-        onDeleted={() => setView({ name: 'menu' })}
+        onBack={() => go({ name: 'menu' }, 'back')}
+        onLaunch={() => go({ name: 'game', sessionId: view.id })}
+        onDeleted={() => go({ name: 'menu' }, 'back')}
       />
     )
   }
 
   return (
     <GameHost
+      key={`game-${view.sessionId}`}
       sessionId={view.sessionId}
-      onExit={() => setView({ name: 'session', id: view.sessionId })}
-      onDeleted={() => setView({ name: 'menu' })}
+      onExit={() => go({ name: 'session', id: view.sessionId }, 'back')}
+      onDeleted={() => go({ name: 'menu' }, 'back')}
     />
   )
 }
 
 /** Bouton retour Android : remonte d'un écran, et confirme avant d'abandonner une partie. */
-function useAndroidBackButton(view: View, setView: (v: View) => void) {
+function useAndroidBackButton(view: View, go: (v: View, dir?: 'fwd' | 'back') => void) {
   const current = useRef(view)
   current.current = view
+  const navigate = useRef(go)
+  navigate.current = go
 
   useEffect(() => {
     const handle = CapApp.addListener('backButton', () => {
       const v = current.current
+      const back = (next: View) => navigate.current(next, 'back')
       if (v.name === 'menu') {
         CapApp.exitApp()
       } else if (v.name === 'setup') {
-        if (v.step === 'config') setView({ ...v, step: 'players' })
-        else setView({ name: 'menu' })
+        if (v.step === 'config') back({ ...v, step: 'players' })
+        else back({ name: 'menu' })
       } else if (v.name === 'session') {
-        setView({ name: 'menu' })
+        back({ name: 'menu' })
       } else if (confirm('Quitter la partie en cours ?')) {
-        setView({ name: 'session', id: v.sessionId })
+        back({ name: 'session', id: v.sessionId })
       }
     })
     return () => {
       handle.then((h) => h.remove())
     }
-  }, [setView])
+  }, [])
 }
 
 /** Héberge le jeu de la session et garde les réglages accessibles pendant la partie. */

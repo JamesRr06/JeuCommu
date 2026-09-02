@@ -37,3 +37,15 @@ export function formatDate(ts: number): string {
 export function plural(n: number, one: string, many = one + 's'): string {
   return `${n} ${n > 1 ? many : one}`
 }
+
+/**
+ * Retour haptique court, pour les moments qui comptent (révélation, élimination,
+ * victoire). Sans effet si l'appareil n'a pas de vibreur.
+ */
+export function haptic(pattern: number | number[] = 12) {
+  try {
+    navigator.vibrate?.(pattern)
+  } catch {
+    /* vibreur indisponible */
+  }
+}

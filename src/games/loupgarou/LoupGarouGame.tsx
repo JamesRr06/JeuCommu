@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactNode } from 'react'
 import { TopBar } from '../../components/UI'
 import DebateTimer from '../../components/Timer'
-import { plural, shuffle, uid } from '../../lib'
+import { haptic, plural, shuffle, uid } from '../../lib'
 import type { Camp, ID, LoupGarouConfig, PlayerResult, Round, Session } from '../../types'
 import { ROLES, type RoleId } from './roles'
 import { DEFAULT_DEBATE_MINUTES } from './config'
@@ -645,7 +645,10 @@ export default function LoupGarouGame({
               </div>
               <button
                 className="primary big block"
-                onClick={() => setPhase({ name: 'deal', index: phase.index, revealed: true })}
+                onClick={() => {
+                  haptic()
+                  setPhase({ name: 'deal', index: phase.index, revealed: true })
+                }}
               >
                 Voir mon rôle
               </button>
@@ -1014,6 +1017,7 @@ export default function LoupGarouGame({
               className="primary big block"
               disabled={!target}
               onClick={() => {
+                haptic([18, 40, 18])
                 setVictimId(target)
                 goToStep(phase.idx + 1, { victim: target })
               }}
@@ -1815,7 +1819,14 @@ export default function LoupGarouGame({
               Égalité
             </button>
           )}
-          <button className="primary big grow" disabled={!target} onClick={() => voteOut(target)}>
+          <button
+            className="primary big grow"
+            disabled={!target}
+            onClick={() => {
+              haptic([18, 40, 18])
+              voteOut(target)
+            }}
+          >
             Éliminer
           </button>
         </div>
@@ -1837,7 +1848,8 @@ export default function LoupGarouGame({
     <div className="app">
       <TopBar title="Fin de la partie" />
       <div className="content fade-step" key={phaseKey}>
-        <div className="card">
+        <div className="card victory">
+          <span className="trophy">🏆</span>
           <h2>Victoire : {winnerLabel}</h2>
           <p className="muted">{phase.reason}</p>
         </div>
