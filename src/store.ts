@@ -20,12 +20,10 @@ const KEY = 'jeucommu.v1'
 
 interface State {
   sessions: Session[]
-  /** Barème proposé par défaut aux nouvelles sessions (modifiable depuis les réglages). */
-  defaults: Scoring
 }
 
 function empty(): State {
-  return { sessions: [], defaults: structuredClone(DEFAULT_SCORING) }
+  return { sessions: [] }
 }
 
 function mergeScoring(scoring: Partial<Scoring> | undefined): Scoring {
@@ -68,7 +66,7 @@ function load(): State {
       s.scoring = mergeScoring(s.scoring)
       s.config = migrateConfig(s.gameId, s.config)
     }
-    return { sessions: parsed.sessions, defaults: mergeScoring(parsed.defaults) }
+    return { sessions: parsed.sessions }
   } catch {
     return empty()
   }
@@ -116,16 +114,6 @@ export function useSessions(): Session[] {
 export function useSession(id: ID | null): Session | undefined {
   const sessions = useSessions()
   return sessions.find((s) => s.id === id)
-}
-
-/** Barème par défaut des futures sessions. */
-export function useDefaultScoring(): Scoring {
-  return useSyncExternalStore(subscribe, snapshot).defaults
-}
-
-export function setDefaultScoring(scoring: Scoring) {
-  ensureLoaded()
-  commit({ ...state, defaults: scoring })
 }
 
 function updateSession(id: ID, fn: (s: Session) => Session) {

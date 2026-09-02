@@ -2,7 +2,7 @@ import type { ReactNode } from 'react'
 import { PlayerEditor, Sheet } from './UI'
 import ConfigSuggestion from './ConfigSuggestion'
 import ScoringEditor from './ScoringEditor'
-import { GAMES, type GameDef } from '../games/registry'
+import type { GameDef } from '../games/registry'
 import type { GameConfig, Player, Scoring } from '../types'
 
 interface SettingsSheetProps {
@@ -18,10 +18,10 @@ interface SettingsSheetProps {
     removeMessage?: (p: Player) => string
     note?: string
   }
-  /** Jeu concerné ; absent = réglages généraux (barème de tous les jeux). */
-  game?: GameDef
+  game: GameDef
+  /** Absent tant que l'effectif n'est pas arrêté (première étape de l'assistant). */
   config?: { value: GameConfig; onChange: (c: GameConfig) => void; playerCount: number }
-  scoring: { value: Scoring; onChange: (s: Scoring) => void; label: string }
+  scoring: { value: Scoring; onChange: (s: Scoring) => void }
   footer?: ReactNode
 }
 
@@ -59,7 +59,7 @@ export default function SettingsSheet({
         </div>
       )}
 
-      {game && config && (
+      {config && (
         <>
           <ConfigSuggestion
             game={game}
@@ -71,12 +71,7 @@ export default function SettingsSheet({
         </>
       )}
 
-      <ScoringEditor
-        games={game ? [game] : GAMES}
-        label={scoring.label}
-        scoring={scoring.value}
-        onChange={scoring.onChange}
-      />
+      <ScoringEditor games={[game]} label="Points" scoring={scoring.value} onChange={scoring.onChange} />
 
       {footer}
     </Sheet>

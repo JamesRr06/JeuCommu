@@ -37,8 +37,9 @@ Le parcours suit toujours le même ordre :
    *Historique* donnent l'état de la soirée en direct.
 
 Une **session** = une soirée sur un seul jeu. Chaque partie enregistrée alimente son **classement**.
-L'engrenage de la barre de titre ouvre les réglages depuis n'importe quel écran — menu, création,
-session ou partie en cours ; les changements de composition s'appliquent à la partie suivante.
+L'engrenage de la barre de titre ouvre les réglages depuis la création, la session et même une partie
+en cours ; les changements de composition s'appliquent à la partie suivante. Le menu d'accueil n'en a
+pas : tout ce qui se règle appartient à une session.
 
 Barème par défaut (modifiable dans *Réglages*) :
 

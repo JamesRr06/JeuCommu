@@ -4,9 +4,17 @@ import { OpenSettings } from '../components/settings-context'
 import ConfigSuggestion from '../components/ConfigSuggestion'
 import ScoringEditor from '../components/ScoringEditor'
 import SettingsSheet from '../components/SettingsSheet'
-import { createSession, newPlayer, useDefaultScoring } from '../store'
+import { createSession, newPlayer } from '../store'
 import { getGame } from '../games/registry'
-import { MAX_PLAYERS, type GameConfig, type GameId, type ID, type Player, type Scoring } from '../types'
+import {
+  DEFAULT_SCORING,
+  MAX_PLAYERS,
+  type GameConfig,
+  type GameId,
+  type ID,
+  type Player,
+  type Scoring,
+} from '../types'
 
 export type SetupStep = 'players' | 'config'
 
@@ -27,14 +35,13 @@ export default function SetupScreen({
   onCreated: (id: ID) => void
 }) {
   const game = getGame(gameId)
-  const defaults = useDefaultScoring()
 
   const [name, setName] = useState(`${game.name} du ${new Date().toLocaleDateString('fr-FR')}`)
   const [players, setPlayers] = useState<Player[]>([])
   const [config, setConfig] = useState<GameConfig>(() => game.suggest(0))
   /** Tant que l'utilisateur n'a rien touché, les réglages suivent l'effectif saisi. */
   const [configTouched, setConfigTouched] = useState(false)
-  const [scoring, setScoring] = useState<Scoring>(() => structuredClone(defaults))
+  const [scoring, setScoring] = useState<Scoring>(() => structuredClone(DEFAULT_SCORING))
   const [settings, setSettings] = useState(false)
 
   const missing = Math.max(0, game.minPlayers - players.length)
@@ -97,7 +104,7 @@ export default function SetupScreen({
             <SettingsSheet
               onClose={() => setSettings(false)}
               subtitle="Session en préparation"
-              scoring={{ value: scoring, onChange: setScoring, label: 'Points' }}
+              scoring={{ value: scoring, onChange: setScoring }}
               game={game}
             />
           )}
@@ -139,7 +146,7 @@ export default function SetupScreen({
               onRename: (id, next) => setPlayers(players.map((p) => (p.id === id ? { ...p, name: next.trim() } : p))),
               onRemove: (id) => setPlayers(players.filter((p) => p.id !== id)),
             }}
-            scoring={{ value: scoring, onChange: setScoring, label: 'Points' }}
+            scoring={{ value: scoring, onChange: setScoring }}
             game={game}
             config={{ value: config, onChange: editConfig, playerCount: players.length }}
           />

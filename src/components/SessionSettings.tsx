@@ -46,7 +46,7 @@ export default function SessionSettings({
         onChange: (c) => setConfig(sessionId, c),
         playerCount: session.players.length,
       }}
-      scoring={{ value: session.scoring, onChange: (s) => setScoring(sessionId, s), label: 'Points' }}
+      scoring={{ value: session.scoring, onChange: (s) => setScoring(sessionId, s) }}
       footer={
         <div className="card">
           <h3>Zone rouge</h3>
