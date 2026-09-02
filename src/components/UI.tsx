@@ -96,6 +96,37 @@ export function Empty({ children }: { children: ReactNode }) {
   return <div className="empty">{children}</div>
 }
 
+/**
+ * Infobulle de détail. S'ouvre au survol à la souris et reste épinglée au clic
+ * (seul mode disponible au doigt, où le survol n'existe pas).
+ */
+export function InfoTip({ label, children }: { label: string; children: ReactNode }) {
+  const [pinned, setPinned] = useState(false)
+  const [hovered, setHovered] = useState(false)
+  const open = pinned || hovered
+
+  return (
+    <span className="infotip">
+      <button
+        className="info"
+        aria-label={`Détail : ${label}`}
+        aria-expanded={open}
+        onClick={() => setPinned((p) => !p)}
+        onPointerEnter={(e) => e.pointerType === 'mouse' && setHovered(true)}
+        onPointerLeave={(e) => e.pointerType === 'mouse' && setHovered(false)}
+      >
+        i
+      </button>
+      {open && (
+        <span className="tip" role="tooltip">
+          <strong>{label}</strong>
+          {children}
+        </span>
+      )}
+    </span>
+  )
+}
+
 /** Fil d'étapes de l'assistant de création (Jeu → Joueurs → Réglages). */
 export function Stepper({ steps, current }: { steps: string[]; current: number }) {
   return (

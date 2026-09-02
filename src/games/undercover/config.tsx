@@ -1,4 +1,4 @@
-import { Counter } from '../../components/UI'
+import { Counter, InfoTip } from '../../components/UI'
 import { plural } from '../../lib'
 import type { GameConfig, UndercoverConfig } from '../../types'
 import type { ConfigEditorProps } from '../registry'
@@ -41,7 +41,14 @@ export function ConfigEditor({ playerCount, config, onChange }: ConfigEditorProp
     <div className="card">
       <h3>Composition</h3>
       <div className="row between">
-        <span>Undercover</span>
+        <span className="grow">
+          Undercover
+          <InfoTip label="Undercover">
+            Il reçoit un mot voisin de celui des civils, sans savoir qu’il est l’infiltré au premier coup d’œil.
+            Il doit décrire son mot assez juste pour passer inaperçu. Les infiltrés gagnent dès qu’ils sont
+            aussi nombreux que les civils.
+          </InfoTip>
+        </span>
         <Counter
           value={c.nbUndercover}
           min={1}
@@ -50,7 +57,13 @@ export function ConfigEditor({ playerCount, config, onChange }: ConfigEditorProp
         />
       </div>
       <div className="row between">
-        <span>Mr White</span>
+        <span className="grow">
+          Mr White
+          <InfoTip label="Mr White">
+            Aucun mot : il bluffe uniquement à partir de ce qu’il entend. S’il est éliminé, l’app lui offre une
+            dernière chance de deviner le mot des civils — réussi, il vole la victoire à lui tout seul.
+          </InfoTip>
+        </span>
         <Counter
           value={c.nbMrWhite}
           min={0}

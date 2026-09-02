@@ -30,6 +30,8 @@ export interface LoupGarouConfig {
   nbLoups: number
   /** Identifiants des rôles spéciaux retenus (voir games/loupgarou/roles.ts). */
   specials: string[]
+  /** Durée du débat du jour, en minutes. 0 = pas de minuteur. */
+  debateMinutes: number
 }
 
 /** Chaque jeu lit la variante qui le concerne (cast en tête de son composant). */

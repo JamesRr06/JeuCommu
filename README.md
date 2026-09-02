@@ -8,7 +8,9 @@ qu'on se passe entre joueurs.
 - 👥 Jusqu'à **15 joueurs** par session.
 - 🏆 **Sessions multi-parties** avec classement cumulé et barème de points paramétrable.
 - ⚙️ **Réglages accessibles à tout moment**, même en pleine partie (engrenage de la barre de titre).
-- 🖤 Interface **noir et or**, pensée pour une pièce peu éclairée.
+- 🖤 Interface **noir et or**, pensée pour une pièce peu éclairée, avec un ciel étoilé animé
+  et un emblème par étape de nuit pour guider le narrateur d'un coup d'œil.
+- ⏱️ **Minuteur de débat** réglable (5 min par défaut) avec vibration et bips en fin de temps.
 - 💾 Tout est stocké **en local** sur le téléphone (aucun compte, aucun réseau).
 
 ## Télécharger l'APK
@@ -44,6 +46,10 @@ Barème par défaut (modifiable dans *Réglages*) :
 
 Les points sont figés au moment où la partie est enregistrée : changer le barème ne réécrit pas l'historique.
 
+Le **minuteur de débat** (réglages du Loup-Garou, 5 min par défaut, 0 pour le désactiver) démarre tout seul
+au lever du jour. Pause, +1 min et relance restent accessibles ; à zéro, l'app vibre, émet trois bips et
+passe la carte en rouge.
+
 ### Undercover
 
 Chaque joueur découvre son mot en privé, puis on décrit son mot à tour de rôle sans le prononcer.
@@ -61,7 +67,8 @@ Elle calcule les morts (protection, potions, chagrin des amoureux), déclenche l
 gère le vote du jour et détecte la fin de partie.
 
 Rôles disponibles : Loup-Garou, Villageois, Voyante, Sorcière, Chasseur, Cupidon, Salvateur, Petite Fille,
-Marionnettiste, Colosse, Singe Savant.
+Marionnettiste, Colosse, Singe Savant. Chaque rôle porte un bouton **ⓘ** dans l'écran de composition :
+survol à la souris, appui au doigt, et le détail complet du rôle s'affiche.
 
 - **Marionnettiste** — seconde vie : dévoré par les loups, sa marionnette meurt à sa place. Il reste en jeu
   mais devient muet (l'app le marque « muet » dans les listes) et ne communique plus que par gestes.

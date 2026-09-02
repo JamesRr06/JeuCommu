@@ -6,6 +6,7 @@ import {
   type GameConfig,
   type GameId,
   type ID,
+  type LoupGarouConfig,
   type Player,
   type RankRow,
   type Round,
@@ -46,6 +47,11 @@ function load(): State {
       s.gameId ??= s.rounds[0]?.gameId ?? 'undercover'
       s.scoring = mergeScoring(s.scoring)
       s.config ??= { nbUndercover: 1, nbMrWhite: 0 }
+      // Le minuteur de débat est arrivé après les premières sessions Loup-Garou.
+      if (s.gameId === 'loupgarou') {
+        const config = s.config as LoupGarouConfig
+        config.debateMinutes ??= 5
+      }
     }
     return { sessions: parsed.sessions, defaults: mergeScoring(parsed.defaults) }
   } catch {

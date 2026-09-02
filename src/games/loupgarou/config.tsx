@@ -1,13 +1,16 @@
-import { Counter } from '../../components/UI'
+import { Counter, InfoTip } from '../../components/UI'
 import { plural } from '../../lib'
 import type { GameConfig, LoupGarouConfig } from '../../types'
 import type { ConfigEditorProps } from '../registry'
 import { OPTIONAL_ROLES, ROLES, type RoleId } from './roles'
 
+export const DEFAULT_DEBATE_MINUTES = 5
+
 export function defaultConfig(playerCount: number): LoupGarouConfig {
   return {
     nbLoups: Math.max(1, Math.round(playerCount / 4)),
     specials: playerCount >= 6 ? ['voyante', 'sorciere', 'chasseur'] : ['voyante'],
+    debateMinutes: DEFAULT_DEBATE_MINUTES,
   }
 }
 
@@ -26,6 +29,7 @@ export function describe(playerCount: number, config: GameConfig): string[] {
     plural(c.nbLoups, 'loup'),
     plural(Math.max(0, playerCount - c.nbLoups - c.specials.length), 'villageois', 'villageois'),
     ...c.specials.map((r) => ROLES[r as RoleId].label),
+    c.debateMinutes > 0 ? `débat ${c.debateMinutes} min` : 'débat libre',
   ]
 }
 
@@ -54,18 +58,40 @@ export function ConfigEditor({ playerCount, config, onChange }: ConfigEditorProp
       </div>
 
       <div className="card">
+        <h3>Débat du jour</h3>
+        <div className="row between">
+          <span>Minuteur</span>
+          <Counter
+            value={c.debateMinutes}
+            min={0}
+            max={20}
+            onChange={(debateMinutes) => onChange({ ...c, debateMinutes })}
+          />
+        </div>
+        <p className="muted">
+          {c.debateMinutes > 0
+            ? `${c.debateMinutes} min de débat avant le vote — le minuteur démarre tout seul au lever du jour.`
+            : 'Aucun minuteur : le village débat aussi longtemps qu’il veut.'}
+        </p>
+      </div>
+
+      <div className="card">
         <h3>Rôles spéciaux</h3>
-        <div className="list">
-          {OPTIONAL_ROLES.map((r) => (
-            <button key={r} className={`item${c.specials.includes(r) ? ' selected' : ''}`} onClick={() => toggle(r)}>
-              <span className="grow">
-                {ROLES[r].label}
-                <br />
-                <span className="muted">{ROLES[r].description}</span>
-              </span>
-              <span className="badge">{c.specials.includes(r) ? 'Inclus' : '—'}</span>
-            </button>
-          ))}
+<div className="list">
+          {OPTIONAL_ROLES.map((r) => {
+            const included = c.specials.includes(r)
+            return (
+              <div key={r} className={`item${included ? ' selected' : ''}`}>
+                <button className="grow link" onClick={() => toggle(r)}>
+                  {ROLES[r].label}
+                  <br />
+                  <span className="muted">{ROLES[r].description}</span>
+                </button>
+                <span className="badge">{included ? 'Inclus' : '—'}</span>
+                <InfoTip label={ROLES[r].label}>{ROLES[r].details}</InfoTip>
+              </div>
+            )
+          })}
         </div>
         <div className="sep" />
         <p className="muted">

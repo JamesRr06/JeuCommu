@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react'
 import { TopBar } from '../../components/UI'
+import DebateTimer from '../../components/Timer'
 import { plural, shuffle, uid } from '../../lib'
 import type { Camp, ID, LoupGarouConfig, PlayerResult, Round, Session } from '../../types'
 import { ROLES, type RoleId } from './roles'
+import { DEFAULT_DEBATE_MINUTES } from './config'
 
 interface LP {
   playerId: ID
@@ -17,6 +19,25 @@ interface LP {
 }
 
 type StepId = 'cupidon' | 'salvateur' | 'voyante' | 'singe' | 'loups' | 'sorciere'
+
+/** Emblème animé affiché au narrateur pendant l'étape, pour repérer d'un coup d'œil qui se réveille. */
+const STEP_ICON: Record<StepId, string> = {
+  cupidon: '💘',
+  salvateur: '🛡️',
+  voyante: '🔮',
+  singe: '🐒',
+  loups: '🐺',
+  sorciere: '🧪',
+}
+
+function Emblem({ icon, label }: { icon: string; label?: string }) {
+  return (
+    <div className="emblem">
+      <span className="emblem-icon">{icon}</span>
+      {label && <span className="emblem-label">{label}</span>}
+    </div>
+  )
+}
 
 const STEP_TITLE: Record<StepId, string> = {
   cupidon: 'Cupidon',
@@ -58,6 +79,7 @@ export default function LoupGarouGame({
   const nbPlayers = session.players.length
   const nbLoups = config.nbLoups
   const specials = config.specials as RoleId[]
+  const debateMinutes = config.debateMinutes ?? DEFAULT_DEBATE_MINUTES
 
   // --- Partie ---
   const [players, setPlayers] = useState<LP[]>([])
@@ -282,6 +304,9 @@ export default function LoupGarouGame({
     onFinish(round)
   }
 
+  // Change à chaque écran : remonte le contenu et rejoue l'animation d'entrée.
+  const phaseKey = JSON.stringify(phase)
+
   const quitButton = (
     <button
       className="icon"
@@ -325,7 +350,7 @@ export default function LoupGarouGame({
     return (
       <div className="app">
         <TopBar title="Loup-Garou" subtitle={`${plural(nbPlayers, 'joueur')} · prêt ?`} onBack={onQuit} />
-        <div className="content">
+        <div className="content fade-step" key={phaseKey}>
           <div className="card">
             <h3>Le village ce soir</h3>
             <div className="row wrap chips">
@@ -372,7 +397,7 @@ export default function LoupGarouGame({
     return (
       <div className="app">
         <TopBar title="Distribution" subtitle={`${phase.index + 1} / ${players.length}`} />
-        <div className="content">
+        <div className="content fade-step" key={phaseKey}>
           {!phase.revealed ? (
             <>
               <p className="muted center-text">Passe le téléphone à</p>
@@ -420,7 +445,8 @@ export default function LoupGarouGame({
     return (
       <div className="app night">
         <TopBar title={`Nuit ${nightNo}`} right={quitButton} />
-        <div className="content">
+        <div className="content fade-step" key={phaseKey}>
+          <Emblem icon="🌙" label={`Nuit ${nightNo}`} />
           <div className="card">
             <h2>Le village s’endort</h2>
             <p className="muted">
@@ -457,7 +483,8 @@ export default function LoupGarouGame({
       return (
         <div className="app night">
           <TopBar title={STEP_TITLE.cupidon} subtitle={`Nuit ${nightNo}`} right={quitButton} />
-          <div className="content">
+          <div className="content fade-step" key={phaseKey}>
+            <Emblem icon={STEP_ICON.cupidon} />
             <p className="step-title">Cupidon désigne les deux amoureux</p>
             <p className="muted">Il peut se choisir lui-même. Si l’un meurt, l’autre meurt aussitôt.</p>
             <div className="list">
@@ -494,7 +521,8 @@ export default function LoupGarouGame({
       return (
         <div className="app night">
           <TopBar title={STEP_TITLE.salvateur} subtitle={`Nuit ${nightNo}`} right={quitButton} />
-          <div className="content">
+          <div className="content fade-step" key={phaseKey}>
+            <Emblem icon={STEP_ICON.salvateur} />
             <p className="step-title">Le Salvateur protège un joueur</p>
             {lastProtectedId && (
               <p className="muted">Interdit cette nuit : {byId(lastProtectedId)?.name} (protégé la nuit dernière).</p>
@@ -521,7 +549,8 @@ export default function LoupGarouGame({
       return (
         <div className="app night">
           <TopBar title={STEP_TITLE.voyante} subtitle={`Nuit ${nightNo}`} right={quitButton} />
-          <div className="content">
+          <div className="content fade-step" key={phaseKey}>
+            <Emblem icon={STEP_ICON.voyante} />
             <p className="step-title">La Voyante sonde un joueur</p>
             <p className="muted">Passe-lui le téléphone : elle choisit, découvre le rôle, puis rend l’appareil.</p>
             <AliveList />
@@ -543,7 +572,8 @@ export default function LoupGarouGame({
       return (
         <div className="app night">
           <TopBar title={STEP_TITLE.singe} subtitle={`Nuit ${nightNo}`} right={quitButton} />
-          <div className="content">
+          <div className="content fade-step" key={phaseKey}>
+            <Emblem icon={STEP_ICON.singe} />
             <p className="step-title">Le Singe Savant ouvre les yeux</p>
             <p className="muted">
               Passe-lui le téléphone : il retourne les cartes une par une et s’arrête quand il le souhaite.
@@ -581,7 +611,8 @@ export default function LoupGarouGame({
       return (
         <div className="app night">
           <TopBar title={STEP_TITLE.loups} subtitle={`Nuit ${nightNo}`} right={quitButton} />
-          <div className="content">
+          <div className="content fade-step" key={phaseKey}>
+            <Emblem icon={STEP_ICON.loups} />
             <p className="step-title">Les loups choisissent leur victime</p>
             <p className="muted">Meute réveillée : {wolfNames || 'aucun loup en vie'}</p>
             <AliveList disabledIds={wolfIds} />
@@ -608,8 +639,9 @@ export default function LoupGarouGame({
     return (
       <div className="app night">
         <TopBar title={STEP_TITLE.sorciere} subtitle={`Nuit ${nightNo}`} right={quitButton} />
-        <div className="content">
-          <p className="step-title">La Sorcière ouvre les yeux</p>
+        <div className="content fade-step" key={phaseKey}>
+          <Emblem icon={STEP_ICON.sorciere} />
+            <p className="step-title">La Sorcière ouvre les yeux</p>
           <div className="card">
             <h3>Victime des loups</h3>
             <p className="big-name">{victim ? victim.name : 'personne'}</p>
@@ -652,7 +684,7 @@ export default function LoupGarouGame({
     return (
       <div className="app night">
         <TopBar title="Vision" />
-        <div className="content">
+        <div className="content fade-step" key={phaseKey}>
           <p className="big-name">{t.name}</p>
           <div className="reveal">
             <div>
@@ -676,7 +708,7 @@ export default function LoupGarouGame({
     return (
       <div className="app night">
         <TopBar title="Cartes du village" subtitle={plural(phase.seen.length, 'carte consultée', 'cartes consultées')} />
-        <div className="content">
+        <div className="content fade-step" key={phaseKey}>
           <p className="step-title">Quelle carte retourner ?</p>
           {remaining.length === 0 ? (
             <p className="muted center-text">Toutes les cartes ont été consultées.</p>
@@ -713,7 +745,7 @@ export default function LoupGarouGame({
     return (
       <div className="app night">
         <TopBar title="Carte retournée" subtitle={plural(seen.length, 'carte')} />
-        <div className="content">
+        <div className="content fade-step" key={phaseKey}>
           <p className="big-name">{t.name}</p>
           <div className="reveal">
             <div>
@@ -769,7 +801,7 @@ export default function LoupGarouGame({
     return (
       <div className="app night">
         <TopBar title="Potion de mort" />
-        <div className="content">
+        <div className="content fade-step" key={phaseKey}>
           <p className="step-title">Qui la Sorcière empoisonne-t-elle ?</p>
           <AliveList />
         </div>
@@ -802,7 +834,7 @@ export default function LoupGarouGame({
     return (
       <div className="app night">
         <TopBar title="Les amoureux" subtitle={`${phase.index + 1} / ${lovers.length}`} />
-        <div className="content">
+        <div className="content fade-step" key={phaseKey}>
           {!phase.revealed ? (
             <>
               <p className="muted center-text">Passe discrètement le téléphone à</p>
@@ -845,7 +877,7 @@ export default function LoupGarouGame({
     return (
       <div className="app day">
         <TopBar title={`Aube du jour ${nightNo}`} right={quitButton} />
-        <div className="content">
+        <div className="content fade-step" key={phaseKey}>
           <div className="card">
             <h2>La marionnette tombe</h2>
             <p className="muted">
@@ -872,7 +904,7 @@ export default function LoupGarouGame({
       return (
         <div className="app night">
           <TopBar title="Le Colosse se réveille" />
-          <div className="content">
+          <div className="content fade-step" key={phaseKey}>
             <p className="muted center-text">Les loups ont dévoré le Colosse. Passe-lui le téléphone.</p>
             <p className="big-name">{colosse.name}</p>
             <div className="reveal">
@@ -888,7 +920,8 @@ export default function LoupGarouGame({
     return (
       <div className="app night">
         <TopBar title="Le Colosse frappe" subtitle="Il en emporte un dans la tombe" />
-        <div className="content">
+        <div className="content fade-step" key={phaseKey}>
+          <Emblem icon="💥" />
           <p className="step-title">Quel Loup-Garou emporter ?</p>
           <div className="list">
             {wolves.map((p) => (
@@ -923,7 +956,7 @@ export default function LoupGarouGame({
     return (
       <div className={`app ${phase.context === 'dawn' || phase.context === 'vote' ? 'day' : ''}`}>
         <TopBar title={title} right={quitButton} />
-        <div className="content">
+        <div className="content fade-step" key={phaseKey}>
           {dead.length === 0 ? (
             <div className="card">
               <h2>Personne n’est mort</h2>
@@ -933,8 +966,8 @@ export default function LoupGarouGame({
             <div className="card">
               <h2>{dead.length > 1 ? 'Ils nous quittent' : 'Il/elle nous quitte'}</h2>
               <div className="list">
-                {dead.map((p) => (
-                  <div key={p.playerId} className="item">
+                {dead.map((p, i) => (
+                  <div key={p.playerId} className="item death-item" style={{ animationDelay: `${i * 140}ms` }}>
                     <span className="grow">{p.name}</span>
                     <span className="badge danger">{ROLES[p.role].label}</span>
                     {p.lover && <span className="badge warn">amoureux</span>}
@@ -958,7 +991,7 @@ export default function LoupGarouGame({
     return (
       <div className="app">
         <TopBar title="Dernier souffle" />
-        <div className="content">
+        <div className="content fade-step" key={phaseKey}>
           <p className="step-title">{hunter.name} était le Chasseur</p>
           <p className="muted">Il emporte un joueur de son choix dans la tombe.</p>
           <AliveList />
@@ -976,11 +1009,12 @@ export default function LoupGarouGame({
     return (
       <div className="app day">
         <TopBar title={`Jour ${nightNo}`} subtitle={`${plural(alive.length, 'survivant')}`} right={quitButton} />
-        <div className="content">
+        <div className="content fade-step" key={phaseKey}>
           <div className="card">
             <h2>Débat et vote</h2>
             <p className="muted">Le village débat, puis désigne un joueur à éliminer.</p>
           </div>
+          {debateMinutes > 0 && <DebateTimer key={`debat-${nightNo}`} minutes={debateMinutes} />}
           <AliveList />
         </div>
         <div className="footer-actions">
@@ -1000,7 +1034,7 @@ export default function LoupGarouGame({
   return (
     <div className="app">
       <TopBar title="Fin de la partie" />
-      <div className="content">
+      <div className="content fade-step" key={phaseKey}>
         <div className="card">
           <h2>
             Victoire :{' '}
