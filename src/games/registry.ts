@@ -30,6 +30,8 @@ export interface GameDef {
   /** Camps rétribués, dans l'ordre d'affichage du barème. */
   camps: { key: string; label: string }[]
   defaultConfig: (playerCount: number) => GameConfig
+  /** Composition conseillée pour cet effectif, proposée au narrateur sans être imposée. */
+  suggest: (playerCount: number) => GameConfig
   validate: (playerCount: number, config: GameConfig) => string | null
   /** Résumé court des réglages, affiché sur l'écran de session. */
   describe: (playerCount: number, config: GameConfig) => string[]
@@ -53,6 +55,7 @@ export const GAMES: GameDef[] = [
       { key: 'mrwhite', label: 'Mr White' },
     ],
     defaultConfig: undercoverConfig.defaultConfig,
+    suggest: undercoverConfig.suggest,
     validate: undercoverConfig.validate,
     describe: undercoverConfig.describe,
     ConfigEditor: undercoverConfig.ConfigEditor,
@@ -63,15 +66,17 @@ export const GAMES: GameDef[] = [
     name: 'Loup-Garou',
     emoji: '🐺',
     tagline: 'Nuits, pouvoirs et votes : le village contre la meute, guidé par l’app.',
-    highlights: ['Narrateur guidé étape par étape', '11 rôles au choix', 'Morts et victoires calculées'],
+    highlights: ['Narrateur guidé étape par étape', '24 rôles au choix', 'Morts et victoires calculées'],
     minPlayers: 4,
     maxPlayersHint: 15,
     camps: [
       { key: 'village', label: 'Village' },
       { key: 'loups', label: 'Loups-Garous' },
       { key: 'amoureux', label: 'Amoureux' },
+      { key: 'solitaire', label: 'Loup-Garou Blanc' },
     ],
     defaultConfig: loupgarouConfig.defaultConfig,
+    suggest: loupgarouConfig.suggest,
     validate: loupgarouConfig.validate,
     describe: loupgarouConfig.describe,
     ConfigEditor: loupgarouConfig.ConfigEditor,

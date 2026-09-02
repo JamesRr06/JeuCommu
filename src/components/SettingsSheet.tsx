@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { PlayerEditor, Sheet } from './UI'
+import ConfigSuggestion from './ConfigSuggestion'
 import { GAMES, type GameDef } from '../games/registry'
 import type { GameConfig, Player, Scoring } from '../types'
 
@@ -66,7 +67,15 @@ export default function SettingsSheet({
       )}
 
       {game && config && (
-        <game.ConfigEditor playerCount={config.playerCount} config={config.value} onChange={config.onChange} />
+        <>
+          <ConfigSuggestion
+            game={game}
+            playerCount={config.playerCount}
+            config={config.value}
+            onApply={config.onChange}
+          />
+          <game.ConfigEditor playerCount={config.playerCount} config={config.value} onChange={config.onChange} />
+        </>
       )}
 
       {games.map((g) => (

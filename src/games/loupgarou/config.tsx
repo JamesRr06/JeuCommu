@@ -6,12 +6,29 @@ import { OPTIONAL_ROLES, ROLES, type RoleId } from './roles'
 
 export const DEFAULT_DEBATE_MINUTES = 5
 
+/**
+ * Compositions conseillées par effectif, dans l'esprit des parties équilibrées :
+ * la meute grossit d'un loup tous les quatre joueurs, et les pouvoirs arrivent
+ * progressivement. Ce n'est qu'un point de départ proposé au narrateur.
+ */
+const SUGGESTIONS: { upTo: number; nbLoups: number; specials: string[] }[] = [
+  { upTo: 5, nbLoups: 1, specials: ['voyante'] },
+  { upTo: 7, nbLoups: 2, specials: ['voyante', 'sorciere'] },
+  { upTo: 9, nbLoups: 2, specials: ['voyante', 'sorciere', 'chasseur'] },
+  { upTo: 11, nbLoups: 3, specials: ['voyante', 'sorciere', 'chasseur', 'cupidon'] },
+  { upTo: 13, nbLoups: 3, specials: ['voyante', 'sorciere', 'chasseur', 'cupidon', 'salvateur'] },
+  { upTo: 99, nbLoups: 4, specials: ['voyante', 'sorciere', 'chasseur', 'cupidon', 'salvateur', 'corbeau'] },
+]
+
+export function suggest(playerCount: number): LoupGarouConfig {
+  const row = SUGGESTIONS.find((r) => playerCount <= r.upTo) ?? SUGGESTIONS[SUGGESTIONS.length - 1]
+  // On ne propose jamais plus de rôles qu'il n'y a de joueurs.
+  const specials = row.specials.slice(0, Math.max(0, playerCount - row.nbLoups - 1))
+  return { nbLoups: Math.max(1, row.nbLoups), specials, debateMinutes: DEFAULT_DEBATE_MINUTES }
+}
+
 export function defaultConfig(playerCount: number): LoupGarouConfig {
-  return {
-    nbLoups: Math.max(1, Math.round(playerCount / 4)),
-    specials: playerCount >= 6 ? ['voyante', 'sorciere', 'chasseur'] : ['voyante'],
-    debateMinutes: DEFAULT_DEBATE_MINUTES,
-  }
+  return suggest(playerCount)
 }
 
 export function validate(playerCount: number, config: GameConfig): string | null {

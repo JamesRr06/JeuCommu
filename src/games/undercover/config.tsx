@@ -8,8 +8,19 @@ export function maxInfiltres(playerCount: number): number {
   return Math.max(1, Math.floor((playerCount - 1) / 2))
 }
 
+/**
+ * Un infiltré pour environ quatre joueurs, et un Mr White dès que la table est
+ * assez fournie pour absorber son bluff. Proposé, jamais imposé.
+ */
+export function suggest(playerCount: number): UndercoverConfig {
+  const max = maxInfiltres(playerCount)
+  const nbMrWhite = playerCount >= 6 ? (playerCount >= 14 ? 2 : 1) : 0
+  const nbUndercover = Math.min(Math.max(1, Math.round(playerCount / 4)), Math.max(1, max - nbMrWhite))
+  return { nbUndercover, nbMrWhite: Math.min(nbMrWhite, Math.max(0, max - nbUndercover)) }
+}
+
 export function defaultConfig(playerCount: number): UndercoverConfig {
-  return { nbUndercover: playerCount >= 7 ? 2 : 1, nbMrWhite: playerCount >= 6 ? 1 : 0 }
+  return suggest(playerCount)
 }
 
 export function validate(playerCount: number, config: GameConfig): string | null {

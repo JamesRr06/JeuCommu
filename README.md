@@ -11,6 +11,7 @@ qu'on se passe entre joueurs.
 - 🖤 Interface **noir et or**, pensée pour une pièce peu éclairée, avec un ciel étoilé animé
   et un emblème par étape de nuit pour guider le narrateur d'un coup d'œil.
 - ⏱️ **Minuteur de débat** réglable (5 min par défaut) avec vibration et bips en fin de temps.
+- 🎯 **Compositions conseillées** selon le nombre de joueurs, proposées d'un bouton et jamais imposées.
 - 💾 Tout est stocké **en local** sur le téléphone (aucun compte, aucun réseau).
 
 ## Télécharger l'APK
@@ -66,17 +67,61 @@ Cupidon, Salvateur, Voyante, Loups, Sorcière — en n'affichant que les étapes
 Elle calcule les morts (protection, potions, chagrin des amoureux), déclenche le tir du Chasseur,
 gère le vote du jour et détecte la fin de partie.
 
-Rôles disponibles : Loup-Garou, Villageois, Voyante, Sorcière, Chasseur, Cupidon, Salvateur, Petite Fille,
-Marionnettiste, Colosse, Singe Savant. Chaque rôle porte un bouton **ⓘ** dans l'écran de composition :
-survol à la souris, appui au doigt, et le détail complet du rôle s'affiche.
+**24 rôles** sont disponibles. Chacun porte un bouton **ⓘ** dans l'écran de composition : survol à la
+souris, appui au doigt, et le détail complet du rôle tel que l'app le joue s'affiche.
 
-- **Marionnettiste** — seconde vie : dévoré par les loups, sa marionnette meurt à sa place. Il reste en jeu
-  mais devient muet (l'app le marque « muet » dans les listes) et ne communique plus que par gestes.
-- **Colosse** — dévoré par les loups, il se réveille, découvre la meute sur le téléphone et emporte
-  le loup de son choix dans la tombe.
+*Base* — Loup-Garou, Villageois, Voyante, Sorcière, Chasseur, Cupidon, Salvateur, Petite Fille
+(rôle purement oral : l'app ne lui ouvre pas d'étape).
+
+*Morts et secondes vies*
+
+- **Marionnettiste** — dévoré par les loups, sa marionnette meurt à sa place. Il reste en jeu mais devient
+  muet (badge « muet ») et ne communique plus que par gestes. Le poison de la Sorcière passe outre.
+- **Ancien** — survit à la première morsure. Mais tué par le vote du village, sa rancune supprime tous les
+  pouvoirs villageois : l'app n'ouvre plus aucune étape de nuit du village.
+- **Colosse** — dévoré par les loups, il découvre la meute sur le téléphone et emporte le loup de son choix.
+- **Idiot du Village** — le premier vote qui le condamne retourne sa carte : il est épargné, mais perd son
+  droit de vote (badge « sans voix »). Un second vote l'élimine pour de bon.
+- **Servante Dévouée** — à chaque vague de morts, elle peut prendre la place d'un éliminé **sans voir sa
+  carte**. Elle en hérite (potions et tir remis à neuf) et le rôle du mort n'est jamais révélé. Une fois.
+
+*Information*
+
 - **Singe Savant** — une fois dans la partie, il retourne autant de cartes qu'il veut, une par une, et
-  s'arrête quand il le souhaite. Une carte de Loup-Garou et il meurt (annoncé à l'aube). Il peut aussi
-  passer son tour pour garder son pouvoir pour une nuit suivante.
+  s'arrête quand il le souhaite. Une carte de loup et il meurt, annoncé à l'aube.
+- **Renard** — chaque nuit, l'app lui dit si un loup se cache parmi une cible et ses deux voisins vivants.
+  L'ordre de la table est celui de saisie des joueurs. Une réponse négative lui coûte son flair.
+- **Corbeau** — désigne chaque nuit un joueur qui commence la journée avec deux voix contre lui : l'app
+  l'affiche en tête de l'écran du jour et le marque « +2 voix ». Le décompte reste au narrateur.
+
+*Camps et bascules*
+
+- **Chien-Loup** — au moment où l'app lui montre sa carte, il choisit son camp. S'il rejoint la meute, il
+  la découvre aussitôt et compte comme loup jusqu'au bout.
+- **Enfant Sauvage** — désigne un modèle la première nuit. Si le modèle meurt, l'app le réveille en privé
+  la nuit suivante pour lui annoncer sa bascule et lui montrer la meute.
+- **Loup-Garou Blanc** — se réveille avec la meute, puis seul chaque nuit paire pour dévorer un loup. Il ne
+  gagne son camp *solitaire* (barème dédié) que s'il est le dernier survivant ; sinon il gagne avec la meute.
+- **Villageois-Villageois** — l'app lui demande de montrer sa carte à toute la table ; badge « innocent ».
+
+*Vote et mise en scène*
+
+- **Bouc Émissaire** — ajoute un bouton « Égalité » au vote. En cas d'égalité il meurt, puis désigne les
+  joueurs privés de vote pour la journée suivante (badge « ne vote pas »).
+- **Juge Bègue** — une fois dans la partie, l'app lui propose un second vote immédiat après le premier,
+  avec un nouveau minuteur de débat.
+- **Voleur** — deux cartes supplémentaires (deux villageois) rejoignent le paquet et deux cartes au hasard
+  restent au milieu. La première nuit, il les découvre et peut en prendre une ; si les deux sont des loups,
+  il est obligé d'échanger. La composition réellement distribuée peut donc être plus légère qu'annoncée.
+- **Comédien** — trois pouvoirs non utilisés dans la partie (Voyante, Salvateur, Renard, Corbeau, Chasseur)
+  sont mis de côté. Chaque nuit il en joue un, l'app enchaîne aussitôt sur l'étape correspondante, et la
+  carte est écartée.
+
+### Composition conseillée
+
+L'écran de réglages propose une composition adaptée à l'effectif (1 loup pour 4-5 joueurs, 2 jusqu'à 9,
+3 jusqu'à 13, 4 au-delà ; les pouvoirs arrivent progressivement). Un bouton l'applique d'un coup — et rien
+n'oblige à la suivre : c'est un simple repère d'équilibrage, la composition reste entièrement libre.
 
 ## Développement
 

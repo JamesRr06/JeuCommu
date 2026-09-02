@@ -478,6 +478,8 @@ input:focus, select:focus { outline: 2px solid var(--gold); outline-offset: -1px
   font-weight: 700;
 }
 
+.card.suggestion { border-color: var(--gold-dim); background: linear-gradient(180deg, var(--gold-soft), var(--bg-elev) 65%); }
+
 /* ---------- Infobulles ---------- */
 
 .infotip { position: relative; display: inline-flex; flex: none; }

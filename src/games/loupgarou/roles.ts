@@ -12,6 +12,19 @@ export type RoleId =
   | 'marionnettiste'
   | 'colosse'
   | 'singe'
+  | 'idiot'
+  | 'ancien'
+  | 'bouc'
+  | 'chienloup'
+  | 'villageois2'
+  | 'servante'
+  | 'voleur'
+  | 'loupblanc'
+  | 'renard'
+  | 'corbeau'
+  | 'sauvage'
+  | 'juge'
+  | 'comedien'
 
 export interface RoleDef {
   id: RoleId
@@ -127,6 +140,136 @@ export const ROLES: Record<RoleId, RoleDef> = {
       'Une seule fois dans la partie, la nuit de son choix. Il retourne les cartes une par une et s’arrête quand il veut. Sur une carte de loup, il meurt — la mort est annoncée à l’aube.',
     unique: true,
   },
+  idiot: {
+    id: 'idiot',
+    label: 'Idiot du Village',
+    camp: 'village',
+    description:
+      'Si le village te condamne, tu es épargné — mais tu perds ton droit de vote.',
+    details:
+      'Le premier vote qui le désigne retourne sa carte : il survit, tout le monde sait qui il est, et l’app le marque « sans voix » pour le reste de la partie. Les loups, eux, peuvent toujours le dévorer, et un second vote contre lui l’élimine pour de bon.',
+    unique: true,
+  },
+  ancien: {
+    id: 'ancien',
+    label: 'Ancien',
+    camp: 'village',
+    description:
+      'Tu survis à la première morsure des loups. Mais si le village te tue, tous perdent leurs pouvoirs.',
+    details:
+      'La première attaque des loups ne le tue pas : l’app annonce qu’il a encaissé et il reste en jeu. En revanche, éliminé par le vote du village, sa rancune prive tous les villageois de leurs pouvoirs — l’app supprime alors toutes les étapes de nuit du village. Le poison de la Sorcière et le Loup-Garou Blanc passent outre son bouclier.',
+    unique: true,
+  },
+  bouc: {
+    id: 'bouc',
+    label: 'Bouc Émissaire',
+    camp: 'village',
+    description:
+      'En cas d’égalité au vote, c’est toi qu’on brûle. Tu choisis alors qui votera le lendemain.',
+    details:
+      'L’app ajoute un bouton « Égalité » au vote du jour tant qu’il est vivant. En cas d’égalité il meurt à la place de tout le monde, puis désigne les joueurs privés de vote pour la journée suivante — l’app les marque « ne vote pas » le jour venu.',
+    unique: true,
+  },
+  chienloup: {
+    id: 'chienloup',
+    label: 'Chien-Loup',
+    camp: 'village',
+    description:
+      'À la distribution, tu choisis ton camp : simple villageois, ou membre de la meute.',
+    details:
+      'Au moment où l’app lui montre sa carte, deux boutons : rester au village ou rejoindre la meute. S’il rejoint les loups, il découvre aussitôt ses complices et compte comme loup jusqu’à la fin — pour la victoire comme pour les points.',
+    unique: true,
+  },
+  villageois2: {
+    id: 'villageois2',
+    label: 'Villageois-Villageois',
+    camp: 'village',
+    description:
+      'Ta carte est publique : tout le monde sait que tu es innocent.',
+    details:
+      'À la distribution, l’app lui demande de montrer sa carte à toute la table. Il porte ensuite le badge « innocent » dans toutes les listes : impossible de le soupçonner, mais il devient une cible évidente.',
+    unique: true,
+  },
+  servante: {
+    id: 'servante',
+    label: 'Servante Dévouée',
+    camp: 'village',
+    description:
+      'Avant qu’une carte éliminée ne soit révélée, tu peux prendre sa place et hériter de son rôle.',
+    details:
+      'À chaque vague de morts, l’app lui propose de prendre la place d’un des éliminés : elle hérite de son rôle (pouvoirs compris, potions et tir remis à neuf) et la carte du mort n’est jamais révélée. Une seule fois dans la partie. Attention : si elle hérite d’une carte de loup, elle change de camp.',
+    unique: true,
+  },
+  voleur: {
+    id: 'voleur',
+    label: 'Voleur',
+    camp: 'village',
+    description:
+      'La première nuit, tu peux échanger ta carte contre l’une des deux cartes du milieu.',
+    details:
+      'Quand il est en jeu, l’app met deux cartes de côté à la distribution. La première nuit, elle les lui montre : il garde la sienne ou prend l’une des deux. Si les deux cartes du milieu sont des loups, il est obligé d’en prendre une.',
+    unique: true,
+  },
+  loupblanc: {
+    id: 'loupblanc',
+    label: 'Loup-Garou Blanc',
+    camp: 'loups',
+    description:
+      'Loup solitaire : tu dévores avec la meute, mais une nuit sur deux tu élimines un loup. Tu gagnes seul.',
+    details:
+      'Il se réveille avec la meute comme un loup ordinaire, puis l’app le réveille seul chaque nuit paire pour dévorer un loup de son choix (ou passer). Sa victime n’est protégée ni par le Salvateur ni par la Sorcière. Il ne gagne son camp « solitaire » que s’il est le dernier survivant ; si les loups gagnent avant, il gagne avec eux.',
+    unique: true,
+  },
+  renard: {
+    id: 'renard',
+    label: 'Renard',
+    camp: 'village',
+    description:
+      'Chaque nuit, tu flaires un joueur et ses deux voisins. Si aucun n’est loup, tu perds ton flair.',
+    details:
+      'L’app lui montre un groupe de trois joueurs — la cible et ses deux voisins vivants — et répond simplement oui ou non à « y a-t-il un loup ». L’ordre de la table est celui dans lequel les joueurs ont été saisis. Une réponse négative lui coûte définitivement son pouvoir.',
+    unique: true,
+  },
+  corbeau: {
+    id: 'corbeau',
+    label: 'Corbeau',
+    camp: 'village',
+    description:
+      'Chaque nuit, tu désignes un joueur : il commence la journée avec deux voix contre lui.',
+    details:
+      'L’app affiche le désigné en tête de l’écran du jour et le marque « +2 voix » dans la liste. C’est au narrateur d’en tenir compte au dépouillement — l’app ne compte pas les voix à sa place.',
+    unique: true,
+  },
+  sauvage: {
+    id: 'sauvage',
+    label: 'Enfant Sauvage',
+    camp: 'village',
+    description:
+      'La première nuit, tu choisis un modèle. S’il meurt, tu rejoins la meute.',
+    details:
+      'L’app lui fait désigner un modèle la première nuit. Tant que le modèle vit, il joue villageois. Dès que le modèle meurt, l’app le réveille en privé la nuit suivante pour lui annoncer sa transformation et lui montrer la meute : il compte alors comme loup pour la victoire et pour les points.',
+    unique: true,
+  },
+  juge: {
+    id: 'juge',
+    label: 'Juge Bègue',
+    camp: 'village',
+    description:
+      'Une fois dans la partie, tu peux exiger un second vote dans la foulée du premier.',
+    details:
+      'Dès que le vote du jour est résolu, l’app lui demande s’il déclenche son second vote. Le village revote aussitôt, avec un nouveau minuteur de débat. Une seule fois dans la partie.',
+    unique: true,
+  },
+  comedien: {
+    id: 'comedien',
+    label: 'Comédien',
+    camp: 'village',
+    description:
+      'Trois cartes sont posées devant toi : chaque nuit tu en joues une, qui est ensuite écartée.',
+    details:
+      'À la distribution, l’app tire trois pouvoirs parmi ceux qui ne sont pas déjà en jeu (Voyante, Salvateur, Renard, Corbeau, Chasseur). Chaque nuit il en choisit un, l’app enchaîne aussitôt sur l’étape correspondante, et la carte est écartée. Il peut aussi passer son tour pour les garder.',
+    unique: true,
+  },
 }
 
 /** Rôles spéciaux proposés dans l'écran de composition, dans l'ordre d'affichage. */
@@ -140,6 +283,19 @@ export const OPTIONAL_ROLES: RoleId[] = [
   'marionnettiste',
   'colosse',
   'singe',
+  'idiot',
+  'ancien',
+  'bouc',
+  'chienloup',
+  'villageois2',
+  'servante',
+  'voleur',
+  'loupblanc',
+  'renard',
+  'corbeau',
+  'sauvage',
+  'juge',
+  'comedien',
 ]
 
 export function roleCamp(id: RoleId): Extract<Camp, 'village' | 'loups'> {

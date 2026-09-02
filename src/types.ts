@@ -6,7 +6,7 @@ export interface Player {
 }
 
 /** Camps possibles, tous jeux confondus. */
-export type Camp = 'civils' | 'undercover' | 'mrwhite' | 'village' | 'loups' | 'amoureux'
+export type Camp = 'civils' | 'undercover' | 'mrwhite' | 'village' | 'loups' | 'amoureux' | 'solitaire'
 
 export const CAMP_LABEL: Record<Camp, string> = {
   civils: 'Civils',
@@ -15,6 +15,7 @@ export const CAMP_LABEL: Record<Camp, string> = {
   village: 'Village',
   loups: 'Loups-Garous',
   amoureux: 'Amoureux',
+  solitaire: 'Loup-Garou Blanc',
 }
 
 export type GameId = 'undercover' | 'loupgarou'
@@ -63,7 +64,7 @@ export type Scoring = Record<GameId, Record<string, number>>
 
 export const DEFAULT_SCORING: Scoring = {
   undercover: { civils: 1, undercover: 3, mrwhite: 4 },
-  loupgarou: { village: 1, loups: 2, amoureux: 3 },
+  loupgarou: { village: 1, loups: 2, amoureux: 3, solitaire: 5 },
 }
 
 /** Une session = un jeu, une liste de joueurs, des réglages, et les parties jouées. */

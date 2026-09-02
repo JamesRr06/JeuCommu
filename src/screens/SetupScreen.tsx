@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { PlayerEditor, Stepper, TopBar } from '../components/UI'
 import { OpenSettings } from '../components/settings-context'
+import ConfigSuggestion from '../components/ConfigSuggestion'
 import SettingsSheet from '../components/SettingsSheet'
 import { createSession, newPlayer, useDefaultScoring } from '../store'
 import { getGame } from '../games/registry'
@@ -114,6 +115,7 @@ export default function SetupScreen({
       />
       <Stepper steps={STEPS} current={2} />
       <div className="content">
+        <ConfigSuggestion game={game} playerCount={players.length} config={config} onApply={editConfig} />
         <game.ConfigEditor playerCount={players.length} config={config} onChange={editConfig} />
 
         <div className="card">
