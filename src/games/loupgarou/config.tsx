@@ -1,8 +1,8 @@
 import { Counter, InfoTip } from '../../components/UI'
-import { plural } from '../../lib'
+import { useT, type Dict } from '../../i18n'
 import { DEFAULT_DEBATE_MINUTES, type GameConfig, type LoupGarouConfig } from '../../types'
 import type { ConfigEditorProps } from '../registry'
-import { OPTIONAL_ROLES, ROLES, type RoleId } from './roles'
+import { OPTIONAL_ROLES, type RoleId } from './roles'
 
 /**
  * Compositions conseillées par effectif, dans l'esprit des parties équilibrées :
@@ -25,27 +25,27 @@ export function suggest(playerCount: number): LoupGarouConfig {
   return { nbLoups: Math.max(1, row.nbLoups), specials, debateMinutes: DEFAULT_DEBATE_MINUTES }
 }
 
-
-export function validate(playerCount: number, config: GameConfig): string | null {
+export function validate(playerCount: number, config: GameConfig, t: Dict): string | null {
   const c = config as LoupGarouConfig
-  if (playerCount < 4) return 'Il faut au moins 4 joueurs.'
-  if (c.nbLoups < 1) return 'Il faut au moins 1 loup-garou.'
-  if (playerCount - c.nbLoups - c.specials.length < 0) return 'Trop de rôles spéciaux pour le nombre de joueurs.'
-  if (c.nbLoups >= playerCount - c.nbLoups) return 'Trop de loups : le village doit être majoritaire.'
+  if (playerCount < 4) return t.games.loupgarou.errMinPlayers
+  if (c.nbLoups < 1) return t.games.loupgarou.errMinWolves
+  if (playerCount - c.nbLoups - c.specials.length < 0) return t.games.loupgarou.errTooManySpecials
+  if (c.nbLoups >= playerCount - c.nbLoups) return t.games.loupgarou.errWolfMajority
   return null
 }
 
-export function describe(playerCount: number, config: GameConfig): string[] {
+export function describe(playerCount: number, config: GameConfig, t: Dict): string[] {
   const c = config as LoupGarouConfig
   return [
-    plural(c.nbLoups, 'loup'),
-    plural(Math.max(0, playerCount - c.nbLoups - c.specials.length), 'villageois', 'villageois'),
-    ...c.specials.map((r) => ROLES[r as RoleId].label),
-    c.debateMinutes > 0 ? `débat ${c.debateMinutes} min` : 'débat libre',
+    t.games.loupgarou.wolves(c.nbLoups),
+    t.games.loupgarou.villagers(Math.max(0, playerCount - c.nbLoups - c.specials.length)),
+    ...c.specials.map((r) => t.roles[r as RoleId].label),
+    c.debateMinutes > 0 ? t.games.loupgarou.debateMinutes(c.debateMinutes) : t.games.loupgarou.freeDebate,
   ]
 }
 
 export function ConfigEditor({ playerCount, config, onChange }: ConfigEditorProps) {
+  const t = useT()
   const c = config as LoupGarouConfig
   const villageois = Math.max(0, playerCount - c.nbLoups - c.specials.length)
 
@@ -57,9 +57,9 @@ export function ConfigEditor({ playerCount, config, onChange }: ConfigEditorProp
   return (
     <>
       <div className="card">
-        <h3>La meute</h3>
+        <h3>{t.games.loupgarou.pack}</h3>
         <div className="row between">
-          <span>Loups-Garous</span>
+          <span>{t.games.loupgarou.wolvesLabel}</span>
           <Counter
             value={c.nbLoups}
             min={1}
@@ -70,9 +70,9 @@ export function ConfigEditor({ playerCount, config, onChange }: ConfigEditorProp
       </div>
 
       <div className="card">
-        <h3>Débat du jour</h3>
+        <h3>{t.games.loupgarou.debate}</h3>
         <div className="row between">
-          <span>Minuteur</span>
+          <span>{t.games.loupgarou.timerLabel}</span>
           <Counter
             value={c.debateMinutes}
             min={0}
@@ -81,33 +81,33 @@ export function ConfigEditor({ playerCount, config, onChange }: ConfigEditorProp
           />
         </div>
         <p className="muted">
-          {c.debateMinutes > 0
-            ? `${c.debateMinutes} min de débat avant le vote — le minuteur démarre tout seul au lever du jour.`
-            : 'Aucun minuteur : le village débat aussi longtemps qu’il veut.'}
+          {c.debateMinutes > 0 ? t.games.loupgarou.timerOn(c.debateMinutes) : t.games.loupgarou.timerOff}
         </p>
       </div>
 
       <div className="card">
-        <h3>Rôles spéciaux</h3>
+        <h3>{t.games.loupgarou.specialRoles}</h3>
         <div className="list">
           {OPTIONAL_ROLES.map((r) => {
             const included = c.specials.includes(r)
             return (
               <div key={r} className={`item${included ? ' selected' : ''}`}>
                 <button className="grow link" onClick={() => toggle(r)}>
-                  {ROLES[r].label}
+                  {t.roles[r].label}
                   <br />
-                  <span className="muted">{ROLES[r].description}</span>
+                  <span className="muted">{t.roles[r].description}</span>
                 </button>
-                <span className="badge">{included ? 'Inclus' : '—'}</span>
-                <InfoTip label={ROLES[r].label}>{ROLES[r].details}</InfoTip>
+                <span className={`badge${included ? ' accent' : ''}`}>
+                  {included ? t.games.loupgarou.included : t.common.dash}
+                </span>
+                <InfoTip label={t.roles[r].label}>{t.roles[r].details}</InfoTip>
               </div>
             )
           })}
         </div>
         <div className="sep" />
         <p className="muted">
-          Simples villageois : {villageois} · Total {c.nbLoups + c.specials.length + villageois}/{playerCount}
+          {t.games.loupgarou.tally(villageois, c.nbLoups + c.specials.length + villageois, playerCount)}
         </p>
       </div>
     </>

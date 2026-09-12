@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { uid } from './lib'
+import { t } from './i18n'
 import {
   DEFAULT_DEBATE_MINUTES,
   DEFAULT_SCORING,
@@ -219,7 +220,7 @@ export function ranking(session: Session): RankRow[] {
   for (const round of session.rounds) {
     for (const res of round.results) {
       const known = session.players.find((p) => p.id === res.playerId)
-      const row = ensure(known ?? { id: res.playerId, name: '(joueur retiré)' })
+      const row = ensure(known ?? { id: res.playerId, name: t().store.removedPlayer })
       row.points += res.points
       row.played += 1
       if (res.won) row.wins += 1

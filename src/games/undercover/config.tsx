@@ -1,5 +1,5 @@
 import { Counter, InfoTip } from '../../components/UI'
-import { plural } from '../../lib'
+import { useT, type Dict } from '../../i18n'
 import type { GameConfig, UndercoverConfig } from '../../types'
 import type { ConfigEditorProps } from '../registry'
 
@@ -19,43 +19,37 @@ export function suggest(playerCount: number): UndercoverConfig {
   return { nbUndercover, nbMrWhite: Math.min(nbMrWhite, Math.max(0, max - nbUndercover)) }
 }
 
-
-export function validate(playerCount: number, config: GameConfig): string | null {
+export function validate(playerCount: number, config: GameConfig, t: Dict): string | null {
   const c = config as UndercoverConfig
   const max = maxInfiltres(playerCount)
-  if (playerCount < 3) return 'Il faut au moins 3 joueurs.'
-  if (c.nbUndercover < 1) return 'Il faut au moins 1 undercover.'
-  if (c.nbUndercover + c.nbMrWhite > max) {
-    return `Trop d'infiltrés : ${max} maximum pour ${playerCount} joueurs.`
-  }
+  if (playerCount < 3) return t.games.undercover.errMinPlayers
+  if (c.nbUndercover < 1) return t.games.undercover.errMinUndercover
+  if (c.nbUndercover + c.nbMrWhite > max) return t.games.undercover.errTooMany(max, playerCount)
   return null
 }
 
-export function describe(playerCount: number, config: GameConfig): string[] {
+export function describe(playerCount: number, config: GameConfig, t: Dict): string[] {
   const c = config as UndercoverConfig
   return [
-    plural(Math.max(0, playerCount - c.nbUndercover - c.nbMrWhite), 'civil'),
-    plural(c.nbUndercover, 'undercover', 'undercover'),
-    plural(c.nbMrWhite, 'Mr White', 'Mr White'),
+    t.games.undercover.civilians(Math.max(0, playerCount - c.nbUndercover - c.nbMrWhite)),
+    t.games.undercover.undercovers(c.nbUndercover),
+    t.games.undercover.mrWhites(c.nbMrWhite),
   ]
 }
 
 export function ConfigEditor({ playerCount, config, onChange }: ConfigEditorProps) {
+  const t = useT()
   const c = config as UndercoverConfig
   const max = maxInfiltres(playerCount)
   const civils = playerCount - c.nbUndercover - c.nbMrWhite
 
   return (
     <div className="card">
-      <h3>Composition</h3>
+      <h3>{t.games.undercover.composition}</h3>
       <div className="row between">
         <span className="grow">
-          Undercover
-          <InfoTip label="Undercover">
-            Il reçoit un mot voisin de celui des civils, sans savoir qu’il est l’infiltré au premier coup d’œil.
-            Il doit décrire son mot assez juste pour passer inaperçu. Les infiltrés gagnent dès qu’ils sont
-            aussi nombreux que les civils.
-          </InfoTip>
+          {t.camps.undercover}
+          <InfoTip label={t.camps.undercover}>{t.games.undercover.undercoverTip}</InfoTip>
         </span>
         <Counter
           value={c.nbUndercover}
@@ -66,11 +60,8 @@ export function ConfigEditor({ playerCount, config, onChange }: ConfigEditorProp
       </div>
       <div className="row between">
         <span className="grow">
-          Mr White
-          <InfoTip label="Mr White">
-            Aucun mot : il bluffe uniquement à partir de ce qu’il entend. S’il est éliminé, l’app lui offre une
-            dernière chance de deviner le mot des civils — réussi, il vole la victoire à lui tout seul.
-          </InfoTip>
+          {t.camps.mrwhite}
+          <InfoTip label={t.camps.mrwhite}>{t.games.undercover.mrWhiteTip}</InfoTip>
         </span>
         <Counter
           value={c.nbMrWhite}
@@ -80,9 +71,7 @@ export function ConfigEditor({ playerCount, config, onChange }: ConfigEditorProp
         />
       </div>
       <div className="sep" />
-      <p className="muted">
-        {plural(Math.max(0, civils), 'civil')} · Mr White ne reçoit aucun mot et doit bluffer.
-      </p>
+      <p className="muted">{t.games.undercover.compositionNote(t.games.undercover.civilians(Math.max(0, civils)))}</p>
     </div>
   )
 }

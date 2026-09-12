@@ -2,6 +2,7 @@ import type { ReactNode } from 'react'
 import { PlayerEditor, Sheet } from './UI'
 import ConfigSuggestion from './ConfigSuggestion'
 import ScoringEditor from './ScoringEditor'
+import { useT } from '../i18n'
 import type { GameDef } from '../games/registry'
 import type { GameConfig, Player, Scoring } from '../types'
 
@@ -36,18 +37,20 @@ export default function SettingsSheet({
   scoring,
   footer,
 }: SettingsSheetProps) {
+  const t = useT()
+
   return (
-    <Sheet title="Réglages" subtitle={subtitle} onClose={onClose}>
+    <Sheet title={t.settings.title} subtitle={subtitle} onClose={onClose}>
       {name && (
         <div className="card">
-          <h3>Nom de la session</h3>
+          <h3>{t.settings.sessionName}</h3>
           <input type="text" value={name.value} maxLength={40} onChange={(e) => name.onChange(e.target.value)} />
         </div>
       )}
 
       {players && (
         <div className="card">
-          <h3>Joueurs ({players.list.length})</h3>
+          <h3>{t.settings.playersCount(players.list.length)}</h3>
           <PlayerEditor
             players={players.list}
             onAdd={players.onAdd}
@@ -71,7 +74,7 @@ export default function SettingsSheet({
         </>
       )}
 
-      <ScoringEditor games={[game]} label="Points" scoring={scoring.value} onChange={scoring.onChange} />
+      <ScoringEditor games={[game]} label={t.scoring.short} scoring={scoring.value} onChange={scoring.onChange} />
 
       {footer}
     </Sheet>

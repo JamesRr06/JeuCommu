@@ -8,8 +8,11 @@ qu'on se passe entre joueurs.
 - 👥 Jusqu'à **15 joueurs** par session.
 - 🏆 **Sessions multi-parties** avec classement cumulé et barème de points paramétrable.
 - ⚙️ **Réglages accessibles à tout moment**, même en pleine partie (engrenage de la barre de titre).
-- 🖤 Interface **noir et or**, pensée pour une pièce peu éclairée, avec un ciel étoilé animé
-  et un emblème par étape de nuit pour guider le narrateur d'un coup d'œil.
+- 🌍 **Français et anglais**, au choix depuis l'engrenage de l'accueil (la langue du téléphone au premier lancement).
+- 🌗 **Thème clair, sombre ou système**, dans une interface façon iPhone : barres translucides, listes
+  groupées à filets, feuilles glissantes et alertes natives.
+- 🌙 Les **écrans de nuit du Loup-Garou restent sombres** dans les deux thèmes — on joue lumières éteintes —
+  avec un ciel étoilé animé et un emblème par étape pour guider le narrateur d'un coup d'œil.
 - ⏱️ **Minuteur de débat** réglable (5 min par défaut) avec vibration et bips en fin de temps.
 - 🎯 **Compositions conseillées** selon le nombre de joueurs, proposées d'un bouton et jamais imposées.
 - ✨ Navigation **fluide** : les écrans glissent dans le sens de la navigation, les listes se déroulent en
@@ -160,11 +163,16 @@ npm run build && npx cap add android && npx cap sync android && cd android && ./
 ### Ajouter un jeu
 
 1. Créer `src/games/<mon-jeu>/MonJeu.tsx` exportant un composant `{ session, onFinish, onQuit }`.
-2. Créer `src/games/<mon-jeu>/config.tsx` avec `defaultConfig`, `validate`, `describe` et `ConfigEditor` :
+2. Créer `src/games/<mon-jeu>/config.tsx` avec `suggest`, `validate`, `describe` et `ConfigEditor` :
    c'est l'écran de réglages, réutilisé par l'assistant de création et par le panneau d'engrenage.
 3. Ajouter son identifiant à `GameId` dans `src/types.ts`, son type de réglages à `GameConfig`
    et son barème dans `DEFAULT_SCORING`.
 4. L'enregistrer dans `src/games/registry.ts` (dont les `camps` alimentent l'éditeur de barème).
+5. Écrire ses textes dans `src/i18n/fr.ts` puis dans `src/i18n/en.ts` : aucune chaîne visible ne vit dans
+   un composant. `en.ts` est typé d'après `fr.ts`, donc un oubli de traduction est une erreur de compilation.
+
+Les textes sont lus par `useT()` dans un composant, par `t()` ailleurs. `validate` et `describe` reçoivent
+le dictionnaire courant en argument : la langue peut changer sans relancer l'application.
 
 Le composant appelle `onFinish(round)` avec le détail par joueur (rôle, camp, victoire, points) :
 le classement de session se met à jour tout seul.

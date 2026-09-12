@@ -1,3 +1,4 @@
+import { useT } from '../i18n'
 import type { GameConfig } from '../types'
 import type { GameDef } from '../games/registry'
 
@@ -24,30 +25,29 @@ export default function ConfigSuggestion({
   config: GameConfig
   onApply: (config: GameConfig) => void
 }) {
+  const t = useT()
   if (playerCount < game.minPlayers) return null
   const suggested = game.suggest(playerCount)
   const applied = signature(config) === signature(suggested)
 
   return (
     <div className="card suggestion">
-      <h3>Conseillé à {playerCount} joueurs</h3>
+      <h3>{t.suggestion.title(playerCount)}</h3>
       <div className="row wrap chips">
-        {game.describe(playerCount, suggested).map((d, i) => (
+        {game.describe(playerCount, suggested, t).map((d, i) => (
           <span key={i} className="badge accent">
             {d}
           </span>
         ))}
       </div>
       {applied ? (
-        <p className="muted">✓ C’est exactement ta composition actuelle.</p>
+        <p className="muted">{t.suggestion.applied}</p>
       ) : (
-        <button className="small block" onClick={() => onApply(suggested)}>
-          Appliquer cette composition
+        <button className="tinted block" onClick={() => onApply(suggested)}>
+          {t.suggestion.apply}
         </button>
       )}
-      <p className="muted">
-        Un repère pour équilibrer la partie, rien de plus : compose comme tu veux, l’app ne t’impose rien.
-      </p>
+      <p className="muted">{t.suggestion.note}</p>
     </div>
   )
 }

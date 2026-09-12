@@ -1,17 +1,13 @@
 import { useMemo, useState } from 'react'
-import { TopBar } from '../../components/UI'
-import { haptic, normalize, pick, plural, shuffle, uid } from '../../lib'
+import { QuitButton, TopBar } from '../../components/UI'
+import { useT } from '../../i18n'
+import { getPrefs } from '../../prefs'
+import { haptic, normalize, pick, shuffle, uid } from '../../lib'
 import type { Camp, ID, PlayerResult, Round, UndercoverConfig } from '../../types'
 import type { GameProps } from '../registry'
 import { WORD_PAIRS } from './words'
 
 type UndercoverRole = 'civil' | 'undercover' | 'mrwhite'
-
-const ROLE_LABEL: Record<UndercoverRole, string> = {
-  civil: 'Civil',
-  undercover: 'Undercover',
-  mrwhite: 'Mr White',
-}
 
 const ROLE_CAMP: Record<UndercoverRole, Camp> = {
   civil: 'civils',
@@ -35,9 +31,9 @@ interface Assignment {
   alive: boolean
 }
 
-/** Tire une paire de mots au hasard, dans un sens ou dans l'autre. */
+/** Tire une paire de mots au hasard dans la langue courante, dans un sens ou dans l'autre. */
 function drawWords(): { civil: string; undercover: string } {
-  const [a, b] = pick(WORD_PAIRS)
+  const [a, b] = pick(WORD_PAIRS[getPrefs().locale])
   return Math.random() < 0.5 ? { civil: a, undercover: b } : { civil: b, undercover: a }
 }
 
@@ -50,6 +46,7 @@ type Phase =
   | { name: 'result'; winner: Camp; reason: string; scored: Camp[] }
 
 export default function UndercoverGame({ session, onFinish, onQuit }: GameProps) {
+  const t = useT()
   // Composition et effectif viennent des réglages de la session.
   const config = session.config as UndercoverConfig
   const nbPlayers = session.players.length
@@ -64,6 +61,8 @@ export default function UndercoverGame({ session, onFinish, onQuit }: GameProps)
   const [starter, setStarter] = useState<string>('')
 
   const alive = useMemo(() => assignments.filter((a) => a.alive), [assignments])
+
+  const roleLabel: Record<UndercoverRole, string> = t.uc.roles
 
   /** Le tour en cours se déduit du nombre d'éliminés : un tour par élimination. */
   const turnOf = (list: Assignment[]) => list.filter((a) => !a.alive).length + 1
@@ -108,13 +107,13 @@ export default function UndercoverGame({ session, onFinish, onQuit }: GameProps)
     const infiltres = aliveList.filter((a) => a.role !== 'civil')
     const civils = aliveList.filter((a) => a.role === 'civil')
     if (infiltres.length === 0) {
-      return { winner: 'civils', reason: 'Tous les infiltrés ont été démasqués.', scored: ['civils'] }
+      return { winner: 'civils', reason: t.uc.reasonAllFound, scored: ['civils'] }
     }
     if (infiltres.length >= civils.length) {
       const hasUndercover = infiltres.some((a) => a.role === 'undercover')
       return {
         winner: hasUndercover ? 'undercover' : 'mrwhite',
-        reason: 'Les infiltrés sont aussi nombreux que les civils.',
+        reason: t.uc.reasonParity,
         scored: ['undercover', 'mrwhite'],
       }
     }
@@ -155,7 +154,7 @@ export default function UndercoverGame({ session, onFinish, onQuit }: GameProps)
       setPhase({
         name: 'result',
         winner: 'mrwhite',
-        reason: `Mr White a deviné le mot : ${civilWord}.`,
+        reason: t.uc.reasonGuessed(civilWord),
         scored: ['mrwhite'],
       })
     } else {
@@ -169,7 +168,7 @@ export default function UndercoverGame({ session, onFinish, onQuit }: GameProps)
       const camp = ROLE_CAMP[a.role]
       const won = scored.includes(camp)
       const points = won ? (scoring[camp] ?? 0) : 0
-      return { playerId: a.playerId, role: ROLE_LABEL[a.role], camp, won, points }
+      return { playerId: a.playerId, role: roleLabel[a.role], camp, won, points }
     })
     const round: Round = {
       id: uid(),
@@ -190,36 +189,34 @@ export default function UndercoverGame({ session, onFinish, onQuit }: GameProps)
   if (phase.name === 'intro') {
     return (
       <div className="app">
-        <TopBar title="Undercover" subtitle={`${plural(nbPlayers, 'joueur')} · prêt ?`} onBack={onQuit} />
+        <TopBar title={t.games.undercover.name} subtitle={t.uc.ready(nbPlayers)} onBack={onQuit} />
         <div className="content fade-step" key={phaseKey}>
           <div className="card">
-            <h3>Composition</h3>
+            <h3>{t.games.undercover.composition}</h3>
             <div className="row wrap chips">
-              <span className="badge accent">{plural(nbPlayers - config.nbUndercover - config.nbMrWhite, 'civil')}</span>
-              <span className="badge accent">{plural(config.nbUndercover, 'undercover')}</span>
-              <span className="badge accent">{config.nbMrWhite} Mr White</span>
+              <span className="badge accent">
+                {t.games.undercover.civilians(nbPlayers - config.nbUndercover - config.nbMrWhite)}
+              </span>
+              <span className="badge accent">{t.games.undercover.undercovers(config.nbUndercover)}</span>
+              <span className="badge accent">{t.games.undercover.mrWhites(config.nbMrWhite)}</span>
             </div>
-            <p className="muted">Modifiable à tout moment depuis l’engrenage.</p>
+            <p className="muted">{t.uc.settingsHint}</p>
           </div>
 
           <div className="card">
-            <h3>Les mots</h3>
-            <div className="reveal" style={{ minHeight: 96 }}>
-              <span className="muted">
-                Cachés — celui qui lance la partie ne doit pas les connaître.
-              </span>
+            <h3>{t.uc.words}</h3>
+            <div className="reveal short">
+              <span className="muted">{t.uc.wordsHidden}</span>
             </div>
-            <p className="muted">
-              Chaque joueur découvrira le sien pendant la distribution, à l’abri des regards.
-            </p>
-            <button className="small block" onClick={() => setWords(drawWords())}>
-              Tirer une autre paire, sans la voir
+            <p className="muted">{t.uc.wordsNote}</p>
+            <button className="tinted block" onClick={() => setWords(drawWords())}>
+              {t.uc.redraw}
             </button>
           </div>
         </div>
         <div className="footer-actions">
           <button className="primary big block" onClick={start}>
-            Distribuer les mots
+            {t.uc.deal}
           </button>
         </div>
       </div>
@@ -231,14 +228,14 @@ export default function UndercoverGame({ session, onFinish, onQuit }: GameProps)
     const last = phase.index === assignments.length - 1
     return (
       <div className="app">
-        <TopBar title="Distribution" subtitle={`${phase.index + 1} / ${assignments.length}`} />
+        <TopBar title={t.uc.dealing} subtitle={`${phase.index + 1} / ${assignments.length}`} />
         <div className="content fade-step" key={phaseKey}>
           {!phase.revealed ? (
             <>
-              <p className="muted center-text">Passe le téléphone à</p>
+              <p className="muted center-text">{t.uc.passTo}</p>
               <p className="big-name">{current.name}</p>
               <div className="reveal">
-                <span className="muted">Personne d’autre ne doit regarder l’écran.</span>
+                <span className="muted">{t.uc.noPeeking}</span>
               </div>
               <button
                 className="primary big block"
@@ -247,7 +244,7 @@ export default function UndercoverGame({ session, onFinish, onQuit }: GameProps)
                   setPhase({ name: 'deal', index: phase.index, revealed: true })
                 }}
               >
-                Voir mon mot
+                {t.uc.seeMyWord}
               </button>
             </>
           ) : (
@@ -256,13 +253,13 @@ export default function UndercoverGame({ session, onFinish, onQuit }: GameProps)
               <div className="reveal">
                 {current.word ? (
                   <div>
-                    <div className="muted">Ton mot</div>
+                    <div className="muted">{t.uc.myWord}</div>
                     <div className="word">{current.word}</div>
                   </div>
                 ) : (
                   <div>
-                    <div className="role">Mr White</div>
-                    <div className="muted">Tu n’as pas de mot : écoute et bluffe.</div>
+                    <div className="role">{t.camps.mrwhite}</div>
+                    <div className="muted">{t.uc.noWord}</div>
                   </div>
                 )}
               </div>
@@ -272,7 +269,7 @@ export default function UndercoverGame({ session, onFinish, onQuit }: GameProps)
                   last ? endOfDeal() : setPhase({ name: 'deal', index: phase.index + 1, revealed: false })
                 }
               >
-                {last ? 'Tout le monde a vu' : 'Suivant'}
+                {last ? t.uc.everyoneSaw : t.common.next}
               </button>
             </>
           )}
@@ -285,35 +282,24 @@ export default function UndercoverGame({ session, onFinish, onQuit }: GameProps)
     return (
       <div className="app">
         <TopBar
-          title={`Tour ${phase.turn}`}
-          subtitle={`${plural(alive.length, 'joueur')} en vie · mêmes mots`}
-          right={
-            <button
-              className="icon"
-              onClick={() => {
-                if (confirm('Abandonner la partie en cours ?')) onQuit()
-              }}
-            >
-              ✕
-            </button>
-          }
+          title={t.uc.turn(phase.turn)}
+          subtitle={t.uc.turnSub(alive.length)}
+          right={<QuitButton onQuit={onQuit} />}
         />
         <div className="content fade-step" key={phaseKey}>
           <div className="card hero">
             <span className="game-emoji big">🗣️</span>
-            <h2>Tour {phase.turn}</h2>
-            <p className="muted">
-              <strong>{starter}</strong> commence, puis on tourne. Un mot par joueur, sans dire son mot.
-            </p>
+            <h2>{t.uc.turn(phase.turn)}</h2>
+            <p className="muted">{t.uc.starter(starter)}</p>
             <div className="row wrap chips center">
-              <span className="badge accent">{plural(alive.length, 'joueur')} en vie</span>
+              <span className="badge accent">{t.uc.aliveBadge(alive.length)}</span>
               {assignments.length > alive.length && (
-                <span className="badge">{plural(assignments.length - alive.length, 'éliminé')}</span>
+                <span className="badge">{t.common.eliminated(assignments.length - alive.length)}</span>
               )}
             </div>
           </div>
           <div className="card">
-            <h3>Vote : qui est éliminé ?</h3>
+            <h3>{t.uc.voteTitle}</h3>
             <div className="list">
               {assignments.map((a) => (
                 <button
@@ -323,7 +309,7 @@ export default function UndercoverGame({ session, onFinish, onQuit }: GameProps)
                   onClick={() => setTarget(a.playerId)}
                 >
                   <span className="grow">{a.name}</span>
-                  {!a.alive && <span className="badge danger">{ROLE_LABEL[a.role]}</span>}
+                  {!a.alive && <span className="badge danger">{roleLabel[a.role]}</span>}
                 </button>
               ))}
             </div>
@@ -338,7 +324,7 @@ export default function UndercoverGame({ session, onFinish, onQuit }: GameProps)
               eliminate()
             }}
           >
-            Éliminer
+            {t.uc.eliminate}
           </button>
         </div>
       </div>
@@ -349,19 +335,19 @@ export default function UndercoverGame({ session, onFinish, onQuit }: GameProps)
     const a = assignments.find((x) => x.playerId === phase.playerId)!
     const suite =
       a.role === 'mrwhite'
-        ? 'Dernière chance de Mr White'
+        ? t.uc.nextMrWhite
         : checkEnd(assignments)
-          ? 'Voir le résultat'
-          : `Lancer le tour ${turnOf(assignments)}`
+          ? t.uc.seeResult
+          : t.uc.startTurn(turnOf(assignments))
     return (
       <div className="app">
-        <TopBar title="Élimination" subtitle={`Tour ${turnOf(assignments) - 1} terminé`} />
+        <TopBar title={t.uc.elimination} subtitle={t.uc.turnDone(turnOf(assignments) - 1)} />
         <div className="content fade-step" key={phaseKey}>
           <p className="big-name">{a.name}</p>
           <div className="reveal">
             <div>
-              <div className="role">{ROLE_LABEL[a.role]}</div>
-              <div className="muted">{a.word ? `Son mot : ${a.word}` : 'Aucun mot'}</div>
+              <div className="role">{roleLabel[a.role]}</div>
+              <div className="muted">{a.word ? t.uc.hisWord(a.word) : t.uc.noWordShort}</div>
             </div>
           </div>
           <button className="primary big block" onClick={() => afterElimination(phase.playerId)}>
@@ -377,29 +363,29 @@ export default function UndercoverGame({ session, onFinish, onQuit }: GameProps)
     const auto = normalize(guess) === normalize(civilWord)
     return (
       <div className="app">
-        <TopBar title="Dernière chance" subtitle="Mr White devine le mot" />
+        <TopBar title={t.uc.lastChance} subtitle={t.uc.lastChanceSub} />
         <div className="content fade-step" key={phaseKey}>
           <p className="big-name">{a.name}</p>
           <div className="card">
-            <h3>Quel est le mot des civils ?</h3>
+            <h3>{t.uc.guessAsk}</h3>
             <input
               type="text"
               value={guess}
               autoFocus
-              placeholder="Ta proposition"
+              placeholder={t.uc.guessPlaceholder}
               onChange={(e) => setGuess(e.target.value)}
             />
             <button className="primary block" disabled={!guess.trim()} onClick={() => submitGuess(auto)}>
-              Valider
+              {t.common.validate}
             </button>
             <div className="sep" />
-            <p className="muted">Le narrateur peut aussi trancher directement :</p>
+            <p className="muted">{t.uc.narratorDecides}</p>
             <div className="row">
               <button className="grow small" onClick={() => submitGuess(true)}>
-                C’était juste
+                {t.uc.wasRight}
               </button>
               <button className="grow small" onClick={() => submitGuess(false)}>
-                C’était faux
+                {t.uc.wasWrong}
               </button>
             </div>
           </div>
@@ -417,22 +403,27 @@ export default function UndercoverGame({ session, onFinish, onQuit }: GameProps)
   }
   return (
     <div className="app">
-      <TopBar title="Fin de la partie" />
+      <TopBar title={t.result.title} />
       <div className="content fade-step" key={phaseKey}>
         <div className="card victory">
           <span className="trophy">🏆</span>
           <h2>
-            Victoire :{' '}
-            {phase.winner === 'civils' ? 'les Civils' : phase.winner === 'undercover' ? 'les Undercover' : 'Mr White'}
+            {t.result.victory(
+              phase.winner === 'civils'
+                ? t.uc.winners.civils
+                : phase.winner === 'undercover'
+                  ? t.uc.winners.undercover
+                  : t.uc.winners.mrwhite,
+            )}
           </h2>
           <p className="muted">{phase.reason}</p>
-          <div className="row wrap">
-            <span className="badge accent">Civils : {civilWord}</span>
-            <span className="badge accent">Undercover : {undercoverWord}</span>
+          <div className="row wrap chips center">
+            <span className="badge accent">{t.uc.civilWord(civilWord)}</span>
+            <span className="badge accent">{t.uc.undercoverWord(undercoverWord)}</span>
           </div>
         </div>
         <div className="card">
-          <h3>Points</h3>
+          <h3>{t.result.points}</h3>
           <div className="list">
             {assignments.map((a) => {
               const camp = ROLE_CAMP[a.role]
@@ -440,10 +431,8 @@ export default function UndercoverGame({ session, onFinish, onQuit }: GameProps)
               return (
                 <div key={a.playerId} className="item">
                   <span className="grow">{a.name}</span>
-                  <span className="badge">{ROLE_LABEL[a.role]}</span>
-                  <span className={`badge ${won ? 'success' : ''}`}>
-                    +{won ? campPoints[camp] : 0}
-                  </span>
+                  <span className="badge">{roleLabel[a.role]}</span>
+                  <span className={`badge ${won ? 'success' : ''}`}>+{won ? campPoints[camp] : 0}</span>
                 </div>
               )
             })}
@@ -452,10 +441,10 @@ export default function UndercoverGame({ session, onFinish, onQuit }: GameProps)
       </div>
       <div className="footer-actions">
         <button className="ghost" onClick={onQuit}>
-          Ignorer
+          {t.common.ignore}
         </button>
         <button className="primary big grow" onClick={() => save(phase)}>
-          Enregistrer au classement
+          {t.result.save}
         </button>
       </div>
     </div>

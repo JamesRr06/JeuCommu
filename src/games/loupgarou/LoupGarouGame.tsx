@@ -1,7 +1,8 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { TopBar } from '../../components/UI'
+import { QuitButton, TopBar } from '../../components/UI'
 import DebateTimer from '../../components/Timer'
-import { haptic, plural, shuffle, uid } from '../../lib'
+import { useT } from '../../i18n'
+import { haptic, shuffle, uid } from '../../lib'
 import {
   DEFAULT_DEBATE_MINUTES,
   type Camp,
@@ -66,22 +67,6 @@ const STEP_ICON: Record<StepId, string> = {
   loupblanc: '🌕',
   sorciere: '🧪',
   corbeau: '🐦‍⬛',
-}
-
-const STEP_TITLE: Record<StepId, string> = {
-  voleur: 'Le Voleur',
-  cupidon: 'Cupidon',
-  sauvage: 'L’Enfant Sauvage',
-  'sauvage-turn': 'L’Enfant Sauvage',
-  salvateur: 'Salvateur',
-  voyante: 'Voyante',
-  renard: 'Le Renard',
-  comedien: 'Le Comédien',
-  singe: 'Le Singe Savant',
-  loups: 'Les Loups-Garous',
-  loupblanc: 'Le Loup-Garou Blanc',
-  sorciere: 'La Sorcière',
-  corbeau: 'Le Corbeau',
 }
 
 /** Pouvoirs que le Comédien peut piocher : ceux que l'app sait lui faire jouer telle quelle. */
@@ -161,6 +146,7 @@ function AliveList({
   onlyIds?: ID[]
   extra?: (p: LP) => ReactNode
 }) {
+  const t = useT()
   const list = players.filter((p) => (onlyIds ? onlyIds.includes(p.playerId) : true))
   return (
     <div className="list">
@@ -173,10 +159,10 @@ function AliveList({
         >
           <span className="grow">{p.name}</span>
           {p.alive && extra?.(p)}
-          {p.alive && p.publicCard && <span className="badge success">innocent</span>}
-          {p.alive && p.mute && <span className="badge warn">muet</span>}
-          {p.alive && p.noVote && <span className="badge warn">sans voix</span>}
-          {!p.alive && <span className="badge danger">mort</span>}
+          {p.alive && p.publicCard && <span className="badge success">{t.lg.badges.innocent}</span>}
+          {p.alive && p.mute && <span className="badge warn">{t.lg.badges.mute}</span>}
+          {p.alive && p.noVote && <span className="badge warn">{t.lg.badges.noVote}</span>}
+          {!p.alive && <span className="badge danger">{t.lg.badges.dead}</span>}
         </button>
       ))}
     </div>
@@ -194,6 +180,7 @@ function foxGroup(players: LP[], targetId: ID): LP[] {
 }
 
 export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) {
+  const t = useT()
   // --- Composition : définie dans les réglages de la session ---
   const config = session.config as LoupGarouConfig
   const nbPlayers = session.players.length
@@ -441,24 +428,24 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
   function checkVictory(list: LP[]): { winner: Camp; reason: string } | null {
     const aliveList = list.filter((p) => p.alive)
     if (aliveList.length === 0) {
-      return { winner: 'loups', reason: 'Le village entier a été décimé.' }
+      return { winner: 'loups', reason: t.lg.reasonDecimated }
     }
     if (aliveList.length === 1 && aliveList[0].role === 'loupblanc') {
-      return { winner: 'solitaire', reason: 'Le Loup-Garou Blanc est le dernier survivant.' }
+      return { winner: 'solitaire', reason: t.lg.reasonWhiteLast }
     }
     const wolves = aliveList.filter(isWolf)
     const others = aliveList.length - wolves.length
     if (aliveList.length === 2 && aliveList.every((p) => p.lover)) {
       const camps = new Set(aliveList.map(campOf))
       if (camps.size === 2) {
-        return { winner: 'amoureux', reason: 'Les amoureux sont les derniers survivants.' }
+        return { winner: 'amoureux', reason: t.lg.reasonLoversLast }
       }
     }
     if (wolves.length === 0) {
-      return { winner: 'village', reason: 'Tous les loups-garous ont été éliminés.' }
+      return { winner: 'village', reason: t.lg.reasonWolvesDead }
     }
     if (wolves.length >= others) {
-      return { winner: 'loups', reason: 'Les loups sont aussi nombreux que les villageois.' }
+      return { winner: 'loups', reason: t.lg.reasonWolvesParity }
     }
     return null
   }
@@ -562,13 +549,13 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
       const won =
         winner === 'amoureux' ? p.lover : winner === 'solitaire' ? p.role === 'loupblanc' : camp === winner
       const points = won ? (scoring[winner] ?? 0) : 0
-      return { playerId: p.playerId, role: ROLES[p.role].label, camp, won, points }
+      return { playerId: p.playerId, role: t.roles[p.role].label, camp, won, points }
     })
     const round: Round = {
       id: uid(),
       gameId: 'loupgarou',
       playedAt: Date.now(),
-      summary: `${plural(nightNo, 'nuit')} — ${reason}`,
+      summary: `${t.common.nights(nightNo)} — ${reason}`,
       winnerCamp: winner,
       results,
     }
@@ -578,53 +565,41 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
   // Change à chaque écran : remonte le contenu et rejoue l'animation d'entrée.
   const phaseKey = JSON.stringify(phase)
 
-  const quitButton = (
-    <button
-      className="icon"
-      onClick={() => {
-        if (confirm('Abandonner la partie en cours ?')) onQuit()
-      }}
-    >
-      ✕
-    </button>
-  )
+  const quitButton = <QuitButton onQuit={onQuit} />
 
   // ---------- Écrans ----------
 
   if (phase.name === 'intro') {
     return (
       <div className="app">
-        <TopBar title="Loup-Garou" subtitle={`${plural(nbPlayers, 'joueur')} · prêt ?`} onBack={onQuit} />
+        <TopBar title={t.games.loupgarou.name} subtitle={t.lg.ready(nbPlayers)} onBack={onQuit} />
         <div className="content fade-step" key={phaseKey}>
           <div className="card">
-            <h3>Le village ce soir</h3>
+            <h3>{t.lg.villageTonight}</h3>
             <div className="row wrap chips">
-              <span className="badge accent">{plural(nbLoups, 'loup')}</span>
-              <span className="badge accent">{nbVillageois} villageois</span>
+              <span className="badge accent">{t.games.loupgarou.wolves(nbLoups)}</span>
+              <span className="badge accent">{t.games.loupgarou.villagers(nbVillageois)}</span>
               {specials.map((r) => (
                 <span key={r} className="badge">
-                  {ROLES[r].label}
+                  {t.roles[r].label}
                 </span>
               ))}
             </div>
-            <p className="muted">Modifiable à tout moment depuis l’engrenage.</p>
+            <p className="muted">{t.lg.settingsHint}</p>
             {specials.includes('voleur') && (
-              <p className="muted">
-                Voleur en jeu : deux cartes de ce paquet resteront au milieu, la composition réelle peut donc
-                être un peu plus légère.
-              </p>
+              <p className="muted">{t.lg.thiefNote}</p>
             )}
           </div>
 
           <div className="card">
-            <h3>Rôles en jeu</h3>
+            <h3>{t.lg.rolesInPlay}</h3>
             <div className="list">
               {specials.map((r) => (
                 <div key={r} className="item">
                   <span className="grow">
-                    {ROLES[r].label}
+                    {t.roles[r].label}
                     <br />
-                    <span className="muted">{ROLES[r].description}</span>
+                    <span className="muted">{t.roles[r].description}</span>
                   </span>
                 </div>
               ))}
@@ -633,7 +608,7 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
         </div>
         <div className="footer-actions">
           <button className="primary big block" onClick={start}>
-            Distribuer les rôles
+            {t.lg.dealRoles}
           </button>
         </div>
       </div>
@@ -643,7 +618,7 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
   if (phase.name === 'deal') {
     const current = players[phase.index]
     const last = phase.index === players.length - 1
-    const def = ROLES[current.role]
+    const def = t.roles[current.role]
     const packmates = packNames(current.playerId)
     const dogChoice = current.role === 'chienloup' && !current.decided
 
@@ -655,14 +630,14 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
 
     return (
       <div className="app">
-        <TopBar title="Distribution" subtitle={`${phase.index + 1} / ${players.length}`} />
+        <TopBar title={t.lg.dealing} subtitle={`${phase.index + 1} / ${players.length}`} />
         <div className="content fade-step" key={phaseKey}>
           {!phase.revealed ? (
             <>
-              <p className="muted center-text">Passe le téléphone à</p>
+              <p className="muted center-text">{t.lg.passTo}</p>
               <p className="big-name">{current.name}</p>
               <div className="reveal">
-                <span className="muted">Personne d’autre ne doit regarder l’écran.</span>
+                <span className="muted">{t.lg.noPeeking}</span>
               </div>
               <button
                 className="primary big block"
@@ -671,7 +646,7 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
                   setPhase({ name: 'deal', index: phase.index, revealed: true })
                 }}
               >
-                Voir mon rôle
+                {t.lg.seeMyRole}
               </button>
             </>
           ) : (
@@ -683,24 +658,24 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
                   <div className="muted">{def.description}</div>
                   {isWolf(current) && packmates.length > 0 && (
                     <div style={{ marginTop: 12 }}>
-                      <span className="badge accent">Ta meute : {packmates.join(', ')}</span>
+                      <span className="badge accent">{t.lg.yourPack(packmates.join(', '))}</span>
                     </div>
                   )}
                   {current.publicCard && (
                     <div style={{ marginTop: 12 }}>
-                      <span className="badge success">Montre ta carte à toute la table</span>
+                      <span className="badge success">{t.lg.showCard}</span>
                     </div>
                   )}
                 </div>
               </div>
               {dogChoice ? (
                 <div className="stack">
-                  <p className="muted center-text">Choisis ton camp maintenant, sans rien dire.</p>
+                  <p className="muted center-text">{t.lg.dogAsk}</p>
                   <button className="primary big block" onClick={() => decideDog(false)}>
-                    Rester au village
+                    {t.lg.dogStay}
                   </button>
                   <button className="big block" onClick={() => decideDog(true)}>
-                    Rejoindre la meute
+                    {t.lg.dogJoin}
                   </button>
                 </div>
               ) : (
@@ -710,7 +685,7 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
                     last ? startNight() : setPhase({ name: 'deal', index: phase.index + 1, revealed: false })
                   }
                 >
-                  {last ? 'Commencer la nuit' : 'Suivant'}
+                  {last ? t.lg.startNight : t.common.next}
                 </button>
               )}
             </>
@@ -723,22 +698,16 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
   if (phase.name === 'night-intro') {
     return (
       <div className="app night">
-        <TopBar title={`Nuit ${nightNo}`} right={quitButton} />
+        <TopBar title={t.lg.night(nightNo)} right={quitButton} />
         <div className="content fade-step" key={phaseKey}>
-          <Emblem icon="🌙" label={`Nuit ${nightNo}`} />
+          <Emblem icon="🌙" label={t.lg.night(nightNo)} />
           <div className="card">
-            <h2>Le village s’endort</h2>
-            <p className="muted">
-              Narrateur : demande à tout le monde de fermer les yeux, puis suis les étapes une par une.
-            </p>
-            {powersLost && (
-              <p className="error">
-                La rancune de l’Ancien a éteint tous les pouvoirs du village : seuls les loups se réveillent.
-              </p>
-            )}
+            <h2>{t.lg.villageSleeps}</h2>
+            <p className="muted">{t.lg.narratorIntro}</p>
+            {powersLost && <p className="error">{t.lg.powersLost}</p>}
           </div>
           <div className="card">
-            <h3>Encore en vie ({alive.length})</h3>
+            <h3>{t.lg.stillAlive(alive.length)}</h3>
             <div className="row wrap">
               {alive.map((p) => (
                 <span key={p.playerId} className="badge">
@@ -750,7 +719,7 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
         </div>
         <div className="footer-actions">
           <button className="primary big block" onClick={() => goToStep(0)}>
-            Démarrer la nuit
+            {t.lg.beginNight}
           </button>
         </div>
       </div>
@@ -764,17 +733,15 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
     if (step === 'voleur') {
       return (
         <div className="app night">
-          <TopBar title={STEP_TITLE.voleur} subtitle={`Nuit ${nightNo}`} right={quitButton} />
+          <TopBar title={t.lg.stepTitles.voleur} subtitle={t.lg.night(nightNo)} right={quitButton} />
           <div className="content fade-step" key={phaseKey}>
             <Emblem icon={STEP_ICON.voleur} />
-            <p className="step-title">Le Voleur ouvre les yeux</p>
-            <p className="muted">
-              Passe-lui le téléphone : il découvre les deux cartes du milieu et décide s’il échange la sienne.
-            </p>
+            <p className="step-title">{t.lg.thiefOpens}</p>
+            <p className="muted">{t.lg.thiefIntro}</p>
           </div>
           <div className="footer-actions">
             <button className="primary big block" onClick={() => setPhase({ name: 'voleur-cards', idx: phase.idx })}>
-              Voir les deux cartes
+              {t.lg.thiefSeeCards}
             </button>
           </div>
         </div>
@@ -786,11 +753,11 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
         setSelection((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : cur.length < 2 ? [...cur, id] : cur))
       return (
         <div className="app night">
-          <TopBar title={STEP_TITLE.cupidon} subtitle={`Nuit ${nightNo}`} right={quitButton} />
+          <TopBar title={t.lg.stepTitles.cupidon} subtitle={t.lg.night(nightNo)} right={quitButton} />
           <div className="content fade-step" key={phaseKey}>
             <Emblem icon={STEP_ICON.cupidon} />
-            <p className="step-title">Cupidon désigne les deux amoureux</p>
-            <p className="muted">Il peut se choisir lui-même. Si l’un meurt, l’autre meurt aussitôt.</p>
+            <p className="step-title">{t.lg.cupidTitle}</p>
+            <p className="muted">{t.lg.cupidNote}</p>
             <div className="list">
               {alive.map((p) => (
                 <button
@@ -812,7 +779,7 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
                 setPhase({ name: 'lovers', resumeIdx: phase.idx + 1, index: 0, revealed: false })
               }}
             >
-              Valider le couple
+              {t.lg.cupidValidate}
             </button>
           </div>
         </div>
@@ -823,11 +790,11 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
       const child = players.find((p) => p.role === 'sauvage')!
       return (
         <div className="app night">
-          <TopBar title={STEP_TITLE.sauvage} subtitle={`Nuit ${nightNo}`} right={quitButton} />
+          <TopBar title={t.lg.stepTitles.sauvage} subtitle={t.lg.night(nightNo)} right={quitButton} />
           <div className="content fade-step" key={phaseKey}>
             <Emblem icon={STEP_ICON.sauvage} />
-            <p className="step-title">L’Enfant Sauvage choisit son modèle</p>
-            <p className="muted">Tant que son modèle vit, il reste villageois. S’il meurt, l’enfant rejoint la meute.</p>
+            <p className="step-title">{t.lg.childTitle}</p>
+            <p className="muted">{t.lg.childNote}</p>
             <AliveList players={players} target={target} onSelect={setTarget} disabledIds={[child.playerId]} />
           </div>
           <div className="footer-actions">
@@ -839,7 +806,7 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
                 goToStep(phase.idx + 1)
               }}
             >
-              Prendre pour modèle
+              {t.lg.childPick}
             </button>
           </div>
         </div>
@@ -850,17 +817,19 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
       const child = byId(turnedId)!
       return (
         <div className="app night">
-          <TopBar title={STEP_TITLE['sauvage-turn']} subtitle={`Nuit ${nightNo}`} right={quitButton} />
+          <TopBar title={t.lg.stepTitles['sauvage-turn']} subtitle={t.lg.night(nightNo)} right={quitButton} />
           <div className="content fade-step" key={phaseKey}>
             <Emblem icon={STEP_ICON['sauvage-turn']} />
-            <p className="muted center-text">Réveille discrètement</p>
+            <p className="muted center-text">{t.lg.childWake}</p>
             <p className="big-name">{child.name}</p>
             <div className="reveal">
               <div>
-                <div className="role">Ton modèle est mort</div>
-                <div className="muted">Tu rejoins la meute — tu gagnes désormais avec les loups.</div>
-                <div style={{ marginTop: 12 }}>
-                  <span className="badge accent">Ta meute : {packNames(child.playerId).join(', ') || 'personne'}</span>
+                <div className="role">{t.lg.childTurned}</div>
+                <div className="muted">{t.lg.childTurnedNote}</div>
+                <div className="pad-top">
+                  <span className="badge accent">
+                    {t.lg.yourPack(packNames(child.playerId).join(', ') || t.common.noOne)}
+                  </span>
                 </div>
               </div>
             </div>
@@ -873,7 +842,7 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
                 goToStep(phase.idx + 1)
               }}
             >
-              Il referme les yeux
+              {t.lg.childCloses}
             </button>
           </div>
         </div>
@@ -883,13 +852,11 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
     if (step === 'salvateur') {
       return (
         <div className="app night">
-          <TopBar title={STEP_TITLE.salvateur} subtitle={`Nuit ${nightNo}`} right={quitButton} />
+          <TopBar title={t.lg.stepTitles.salvateur} subtitle={t.lg.night(nightNo)} right={quitButton} />
           <div className="content fade-step" key={phaseKey}>
             <Emblem icon={STEP_ICON.salvateur} />
-            <p className="step-title">Le Salvateur protège un joueur</p>
-            {lastProtectedId && (
-              <p className="muted">Interdit cette nuit : {byId(lastProtectedId)?.name} (protégé la nuit dernière).</p>
-            )}
+            <p className="step-title">{t.lg.guardTitle}</p>
+            {lastProtectedId && <p className="muted">{t.lg.guardForbidden(byId(lastProtectedId)?.name ?? '')}</p>}
             <AliveList players={players} target={target} onSelect={setTarget} disabledIds={lastProtectedId ? [lastProtectedId] : []} />
           </div>
           <div className="footer-actions">
@@ -901,7 +868,7 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
                 goToStep(phase.idx + 1)
               }}
             >
-              Protéger
+              {t.lg.guardProtect}
             </button>
           </div>
         </div>
@@ -911,11 +878,11 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
     if (step === 'voyante') {
       return (
         <div className="app night">
-          <TopBar title={STEP_TITLE.voyante} subtitle={`Nuit ${nightNo}`} right={quitButton} />
+          <TopBar title={t.lg.stepTitles.voyante} subtitle={t.lg.night(nightNo)} right={quitButton} />
           <div className="content fade-step" key={phaseKey}>
             <Emblem icon={STEP_ICON.voyante} />
-            <p className="step-title">La Voyante sonde un joueur</p>
-            <p className="muted">Passe-lui le téléphone : elle choisit, découvre le rôle, puis rend l’appareil.</p>
+            <p className="step-title">{t.lg.seerTitle}</p>
+            <p className="muted">{t.lg.seerNote}</p>
             <AliveList players={players} target={target} onSelect={setTarget} />
           </div>
           <div className="footer-actions">
@@ -924,7 +891,7 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
               disabled={!target}
               onClick={() => setPhase({ name: 'voyante-reveal', idx: phase.idx, targetId: target! })}
             >
-              Révéler le rôle
+              {t.lg.seerReveal}
             </button>
           </div>
         </div>
@@ -934,13 +901,11 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
     if (step === 'renard') {
       return (
         <div className="app night">
-          <TopBar title={STEP_TITLE.renard} subtitle={`Nuit ${nightNo}`} right={quitButton} />
+          <TopBar title={t.lg.stepTitles.renard} subtitle={t.lg.night(nightNo)} right={quitButton} />
           <div className="content fade-step" key={phaseKey}>
             <Emblem icon={STEP_ICON.renard} />
-            <p className="step-title">Le Renard flaire un groupe</p>
-            <p className="muted">
-              Il désigne un joueur : l’app examine ce joueur et ses deux voisins vivants, dans l’ordre de la table.
-            </p>
+            <p className="step-title">{t.lg.foxTitle}</p>
+            <p className="muted">{t.lg.foxNote}</p>
             <AliveList players={players} target={target} onSelect={setTarget} />
           </div>
           <div className="footer-actions">
@@ -954,7 +919,7 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
                 setPhase({ name: 'renard-reveal', idx: phase.idx, targetId: target!, found })
               }}
             >
-              Flairer
+              {t.lg.foxSniff}
             </button>
           </div>
         </div>
@@ -964,20 +929,18 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
     if (step === 'comedien') {
       return (
         <div className="app night">
-          <TopBar title={STEP_TITLE.comedien} subtitle={`Nuit ${nightNo}`} right={quitButton} />
+          <TopBar title={t.lg.stepTitles.comedien} subtitle={t.lg.night(nightNo)} right={quitButton} />
           <div className="content fade-step" key={phaseKey}>
             <Emblem icon={STEP_ICON.comedien} />
-            <p className="step-title">Le Comédien entre en scène</p>
-            <p className="muted">
-              Il lui reste {plural(actorCards.length, 'carte')}. Il en joue une cette nuit, ou garde tout pour plus tard.
-            </p>
+            <p className="step-title">{t.lg.actorTitle}</p>
+            <p className="muted">{t.lg.actorNote(t.common.cards(actorCards.length))}</p>
           </div>
           <div className="footer-actions">
             <button className="ghost" onClick={() => goToStep(phase.idx + 1)}>
-              Passer
+              {t.common.skip}
             </button>
             <button className="primary big grow" onClick={() => setPhase({ name: 'comedien-cards', idx: phase.idx })}>
-              Voir ses cartes
+              {t.lg.actorSeeCards}
             </button>
           </div>
         </div>
@@ -987,24 +950,19 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
     if (step === 'singe') {
       return (
         <div className="app night">
-          <TopBar title={STEP_TITLE.singe} subtitle={`Nuit ${nightNo}`} right={quitButton} />
+          <TopBar title={t.lg.stepTitles.singe} subtitle={t.lg.night(nightNo)} right={quitButton} />
           <div className="content fade-step" key={phaseKey}>
             <Emblem icon={STEP_ICON.singe} />
-            <p className="step-title">Le Singe Savant ouvre les yeux</p>
-            <p className="muted">
-              Passe-lui le téléphone : il retourne les cartes une par une et s’arrête quand il le souhaite.
-              S’il tombe sur un Loup-Garou, sa curiosité lui coûte la vie.
-            </p>
+            <p className="step-title">{t.lg.monkeyTitle}</p>
+            <p className="muted">{t.lg.monkeyNote}</p>
             <div className="card">
-              <h3>Une seule fois dans la partie</h3>
-              <p className="muted">
-                S’il passe son tour, il pourra encore utiliser son pouvoir lors d’une nuit suivante.
-              </p>
+              <h3>{t.lg.monkeyOnce}</h3>
+              <p className="muted">{t.lg.monkeyOnceNote}</p>
             </div>
           </div>
           <div className="footer-actions">
             <button className="ghost" onClick={() => goToStep(phase.idx + 1)}>
-              Passer
+              {t.common.skip}
             </button>
             <button
               className="primary big grow"
@@ -1014,7 +972,7 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
                 setPhase({ name: 'singe-pick', idx: phase.idx, seen: [] })
               }}
             >
-              Consulter des cartes
+              {t.lg.monkeyConsult}
             </button>
           </div>
         </div>
@@ -1026,11 +984,11 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
       const wolfIds = wolves.map((p) => p.playerId)
       return (
         <div className="app night">
-          <TopBar title={STEP_TITLE.loups} subtitle={`Nuit ${nightNo}`} right={quitButton} />
+          <TopBar title={t.lg.stepTitles.loups} subtitle={t.lg.night(nightNo)} right={quitButton} />
           <div className="content fade-step" key={phaseKey}>
             <Emblem icon={STEP_ICON.loups} />
-            <p className="step-title">Les loups choisissent leur victime</p>
-            <p className="muted">Meute réveillée : {wolfNames || 'aucun loup en vie'}</p>
+            <p className="step-title">{t.lg.wolvesTitle}</p>
+            <p className="muted">{t.lg.wolvesAwake(wolfNames || t.lg.noWolfAlive)}</p>
             <AliveList players={players} target={target} onSelect={setTarget} disabledIds={wolfIds} />
           </div>
           <div className="footer-actions">
@@ -1043,7 +1001,7 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
                 goToStep(phase.idx + 1, { victim: target })
               }}
             >
-              Dévorer
+              {t.lg.devour}
             </button>
           </div>
         </div>
@@ -1055,20 +1013,20 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
       const preys = players.filter((p) => p.alive && isWolf(p) && p.playerId !== white.playerId)
       return (
         <div className="app night">
-          <TopBar title={STEP_TITLE.loupblanc} subtitle={`Nuit ${nightNo}`} right={quitButton} />
+          <TopBar title={t.lg.stepTitles.loupblanc} subtitle={t.lg.night(nightNo)} right={quitButton} />
           <div className="content fade-step" key={phaseKey}>
             <Emblem icon={STEP_ICON.loupblanc} />
-            <p className="step-title">Le Loup-Garou Blanc se réveille seul</p>
-            <p className="muted">Une nuit sur deux, il peut dévorer un membre de sa propre meute.</p>
+            <p className="step-title">{t.lg.whiteTitle}</p>
+            <p className="muted">{t.lg.whiteNote}</p>
             {preys.length === 0 ? (
-              <p className="muted center-text">Aucun autre loup en vie.</p>
+              <p className="muted center-text">{t.lg.whiteNoPrey}</p>
             ) : (
               <AliveList players={players} target={target} onSelect={setTarget} onlyIds={preys.map((p) => p.playerId)} />
             )}
           </div>
           <div className="footer-actions">
             <button className="ghost" onClick={() => goToStep(phase.idx + 1, { white: null })}>
-              Passer
+              {t.common.skip}
             </button>
             <button
               className="primary big grow"
@@ -1078,7 +1036,7 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
                 goToStep(phase.idx + 1, { white: target })
               }}
             >
-              Dévorer
+              {t.lg.devour}
             </button>
           </div>
         </div>
@@ -1088,16 +1046,16 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
     if (step === 'corbeau') {
       return (
         <div className="app night">
-          <TopBar title={STEP_TITLE.corbeau} subtitle={`Nuit ${nightNo}`} right={quitButton} />
+          <TopBar title={t.lg.stepTitles.corbeau} subtitle={t.lg.night(nightNo)} right={quitButton} />
           <div className="content fade-step" key={phaseKey}>
             <Emblem icon={STEP_ICON.corbeau} />
-            <p className="step-title">Le Corbeau désigne sa cible</p>
-            <p className="muted">Elle commencera la journée avec deux voix contre elle.</p>
+            <p className="step-title">{t.lg.crowTitle}</p>
+            <p className="muted">{t.lg.crowNote}</p>
             <AliveList players={players} target={target} onSelect={setTarget} />
           </div>
           <div className="footer-actions">
             <button className="ghost" onClick={() => goToStep(phase.idx + 1)}>
-              Passer
+              {t.common.skip}
             </button>
             <button
               className="primary big grow"
@@ -1107,7 +1065,7 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
                 goToStep(phase.idx + 1)
               }}
             >
-              Croasser
+              {t.lg.crowCaw}
             </button>
           </div>
         </div>
@@ -1119,14 +1077,14 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
     const victimSurvives = witchSaved || (protectedId !== null && protectedId === victimId)
     return (
       <div className="app night">
-        <TopBar title={STEP_TITLE.sorciere} subtitle={`Nuit ${nightNo}`} right={quitButton} />
+        <TopBar title={t.lg.stepTitles.sorciere} subtitle={t.lg.night(nightNo)} right={quitButton} />
         <div className="content fade-step" key={phaseKey}>
           <Emblem icon={STEP_ICON.sorciere} />
-          <p className="step-title">La Sorcière ouvre les yeux</p>
+          <p className="step-title">{t.lg.witchTitle}</p>
           <div className="card">
-            <h3>Victime des loups</h3>
-            <p className="big-name">{victim ? victim.name : 'personne'}</p>
-            {victimSurvives && <p className="muted center-text">Cette victime est déjà sauvée cette nuit.</p>}
+            <h3>{t.lg.witchVictim}</h3>
+            <p className="big-name">{victim ? victim.name : t.common.noOne}</p>
+            {victimSurvives && <p className="muted center-text">{t.lg.witchAlreadySaved}</p>}
           </div>
           <div className="stack">
             <button
@@ -1137,7 +1095,7 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
                 setHealUsed(true)
               }}
             >
-              Potion de vie {healUsed ? '(utilisée)' : witchSaved ? '✓ appliquée' : ''}
+              {t.lg.witchHeal} {healUsed ? t.lg.used : witchSaved ? t.lg.applied : ''}
             </button>
             <button
               className="block"
@@ -1147,13 +1105,13 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
                 setPhase({ name: 'sorciere-kill', idx: phase.idx })
               }}
             >
-              Potion de mort {poisonUsed ? '(utilisée)' : witchKillId ? `→ ${byId(witchKillId)?.name}` : ''}
+              {t.lg.witchPoison} {poisonUsed ? t.lg.used : witchKillId ? `→ ${byId(witchKillId)?.name}` : ''}
             </button>
           </div>
         </div>
         <div className="footer-actions">
           <button className="primary big block" onClick={() => goToStep(phase.idx + 1)}>
-            Terminer la nuit
+            {t.lg.witchEndNight}
           </button>
         </div>
       </div>
@@ -1171,30 +1129,28 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
 
     return (
       <div className="app night">
-        <TopBar title="Les cartes du milieu" />
+        <TopBar title={t.lg.thiefCards} />
         <div className="content fade-step" key={phaseKey}>
           <p className="big-name">{thief.name}</p>
           <div className="list">
             {thiefCards.map((r, i) => (
               <button key={i} className="item" onClick={() => takeCard(r)}>
                 <span className="grow">
-                  {ROLES[r].label}
+                  {t.roles[r].label}
                   <br />
-                  <span className="muted">{ROLES[r].description}</span>
+                  <span className="muted">{t.roles[r].description}</span>
                 </span>
-                <span className="badge accent">Prendre</span>
+                <span className="badge accent">{t.lg.thiefTake}</span>
               </button>
             ))}
           </div>
           {mustSwap && (
-            <p className="error center-text">
-              Les deux cartes sont des loups : le Voleur est obligé d’en prendre une.
-            </p>
+            <p className="error center-text">{t.lg.thiefMustSwap}</p>
           )}
         </div>
         <div className="footer-actions">
           <button className="primary big block" disabled={mustSwap} onClick={() => goToStep(phase.idx + 1)}>
-            Garder ma carte
+            {t.lg.thiefKeep}
           </button>
         </div>
       </div>
@@ -1225,26 +1181,26 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
 
     return (
       <div className="app night">
-        <TopBar title="Les cartes du Comédien" />
+        <TopBar title={t.lg.actorCardsTitle} />
         <div className="content fade-step" key={phaseKey}>
           <p className="big-name">{actor.name}</p>
           <div className="list">
             {actorCards.map((r) => (
               <button key={r} className="item" onClick={() => playCard(r)}>
                 <span className="grow">
-                  {ROLES[r].label}
+                  {t.roles[r].label}
                   <br />
-                  <span className="muted">{ROLES[r].description}</span>
+                  <span className="muted">{t.roles[r].description}</span>
                 </span>
-                <span className="badge accent">Jouer</span>
+                <span className="badge accent">{t.lg.actorPlay}</span>
               </button>
             ))}
           </div>
-          <p className="muted center-text">La carte jouée est ensuite écartée définitivement.</p>
+          <p className="muted center-text">{t.lg.actorDiscardNote}</p>
         </div>
         <div className="footer-actions">
           <button className="primary big block" onClick={() => goToStep(phase.idx + 1)}>
-            Finalement, il passe
+            {t.lg.actorSkip}
           </button>
         </div>
       </div>
@@ -1252,20 +1208,20 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
   }
 
   if (phase.name === 'voyante-reveal') {
-    const t = byId(phase.targetId)!
+    const seen = byId(phase.targetId)!
     return (
       <div className="app night">
-        <TopBar title="Vision" />
+        <TopBar title={t.lg.seerVision} />
         <div className="content fade-step" key={phaseKey}>
-          <p className="big-name">{t.name}</p>
+          <p className="big-name">{seen.name}</p>
           <div className="reveal">
             <div>
-              <div className="role">{ROLES[t.role].label}</div>
-              <div className="muted">{campOf(t) === 'loups' ? 'Camp des loups' : 'Camp du village'}</div>
+              <div className="role">{t.roles[seen.role].label}</div>
+              <div className="muted">{campOf(seen) === 'loups' ? t.lg.campWolves : t.lg.campVillage}</div>
             </div>
           </div>
           <button className="primary big block" onClick={() => goToStep(phase.idx + 1)}>
-            La Voyante referme les yeux
+            {t.lg.seerCloses}
           </button>
         </div>
       </div>
@@ -1276,7 +1232,7 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
     const group = foxGroup(players, phase.targetId)
     return (
       <div className="app night">
-        <TopBar title="Le flair du Renard" />
+        <TopBar title={t.lg.foxResultTitle} />
         <div className="content fade-step" key={phaseKey}>
           <div className="row wrap chips center">
             {group.map((p) => (
@@ -1287,16 +1243,12 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
           </div>
           <div className="reveal">
             <div>
-              <div className="role">{phase.found ? 'Il y a un loup' : 'Aucun loup'}</div>
-              <div className="muted">
-                {phase.found
-                  ? 'Le Renard ne sait pas lequel — il garde son flair pour les nuits suivantes.'
-                  : 'Les trois sont innocents : le Renard perd définitivement son pouvoir.'}
-              </div>
+              <div className="role">{phase.found ? t.lg.foxFound : t.lg.foxNotFound}</div>
+              <div className="muted">{phase.found ? t.lg.foxFoundNote : t.lg.foxNotFoundNote}</div>
             </div>
           </div>
           <button className="primary big block" onClick={() => goToStep(phase.idx + 1)}>
-            Le Renard referme les yeux
+            {t.lg.foxCloses}
           </button>
         </div>
       </div>
@@ -1310,11 +1262,11 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
     )
     return (
       <div className="app night">
-        <TopBar title="Cartes du village" subtitle={plural(phase.seen.length, 'carte consultée', 'cartes consultées')} />
+        <TopBar title={t.lg.monkeyCardsTitle} subtitle={t.common.cardsSeen(phase.seen.length)} />
         <div className="content fade-step" key={phaseKey}>
-          <p className="step-title">Quelle carte retourner ?</p>
+          <p className="step-title">{t.lg.monkeyWhich}</p>
           {remaining.length === 0 ? (
-            <p className="muted center-text">Toutes les cartes ont été consultées.</p>
+            <p className="muted center-text">{t.lg.monkeyAllSeen}</p>
           ) : (
             <AliveList players={players} target={target} onSelect={setTarget} disabledIds={[singe.playerId, ...phase.seen]} />
           )}
@@ -1327,14 +1279,14 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
               goToStep(phase.idx + 1)
             }}
           >
-            S’arrêter là
+            {t.lg.monkeyStop}
           </button>
           <button
             className="primary big grow"
             disabled={!target}
             onClick={() => setPhase({ name: 'singe-reveal', idx: phase.idx, seen: phase.seen, targetId: target! })}
           >
-            Retourner la carte
+            {t.lg.monkeyFlip}
           </button>
         </div>
       </div>
@@ -1342,25 +1294,23 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
   }
 
   if (phase.name === 'singe-reveal') {
-    const t = byId(phase.targetId)!
-    const caught = campOf(t) === 'loups'
+    const flipped = byId(phase.targetId)!
+    const caught = campOf(flipped) === 'loups'
     const seen = [...phase.seen, phase.targetId]
     return (
       <div className="app night">
-        <TopBar title="Carte retournée" subtitle={plural(seen.length, 'carte')} />
+        <TopBar title={t.lg.monkeyFlipped} subtitle={t.common.cards(seen.length)} />
         <div className="content fade-step" key={phaseKey}>
-          <p className="big-name">{t.name}</p>
+          <p className="big-name">{flipped.name}</p>
           <div className="reveal">
             <div>
-              <div className="role">{ROLES[t.role].label}</div>
-              <div className="muted">{caught ? 'Un Loup-Garou !' : 'Camp du village'}</div>
+              <div className="role">{t.roles[flipped.role].label}</div>
+              <div className="muted">{caught ? t.lg.monkeyCaught : t.lg.campVillage}</div>
             </div>
           </div>
           {caught ? (
             <>
-              <p className="muted center-text">
-                La curiosité du Singe Savant lui coûte la vie. Sa mort sera annoncée à l’aube.
-              </p>
+              <p className="muted center-text">{t.lg.monkeyDies}</p>
               <button
                 className="primary big block"
                 onClick={() => {
@@ -1370,7 +1320,7 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
                   goToStep(phase.idx + 1, { singe: singe.playerId })
                 }}
               >
-                Refermer les yeux
+                {t.lg.monkeyCloseEyes}
               </button>
             </>
           ) : (
@@ -1382,7 +1332,7 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
                   setPhase({ name: 'singe-pick', idx: phase.idx, seen })
                 }}
               >
-                Retourner une autre carte
+                {t.lg.monkeyAnother}
               </button>
               <button
                 className="block"
@@ -1391,7 +1341,7 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
                   goToStep(phase.idx + 1)
                 }}
               >
-                S’arrêter là
+                {t.lg.monkeyStop}
               </button>
             </div>
           )}
@@ -1403,14 +1353,14 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
   if (phase.name === 'sorciere-kill') {
     return (
       <div className="app night">
-        <TopBar title="Potion de mort" />
+        <TopBar title={t.lg.witchPoison} />
         <div className="content fade-step" key={phaseKey}>
-          <p className="step-title">Qui la Sorcière empoisonne-t-elle ?</p>
+          <p className="step-title">{t.lg.witchKillAsk}</p>
           <AliveList players={players} target={target} onSelect={setTarget} />
         </div>
         <div className="footer-actions">
           <button className="ghost" onClick={() => setPhase({ name: 'step', idx: phase.idx })}>
-            Annuler
+            {t.common.cancel}
           </button>
           <button
             className="primary big grow"
@@ -1422,7 +1372,7 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
               setPhase({ name: 'step', idx: phase.idx })
             }}
           >
-            Empoisonner
+            {t.lg.witchKill}
           </button>
         </div>
       </div>
@@ -1436,23 +1386,23 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
     const last = phase.index === lovers.length - 1
     return (
       <div className="app night">
-        <TopBar title="Les amoureux" subtitle={`${phase.index + 1} / ${lovers.length}`} />
+        <TopBar title={t.lg.loversTitle} subtitle={`${phase.index + 1} / ${lovers.length}`} />
         <div className="content fade-step" key={phaseKey}>
           {!phase.revealed ? (
             <>
-              <p className="muted center-text">Passe discrètement le téléphone à</p>
+              <p className="muted center-text">{t.lg.loversPass}</p>
               <p className="big-name">{current.name}</p>
               <button className="primary big block" onClick={() => setPhase({ ...phase, revealed: true })}>
-                Voir mon amoureux
+                {t.lg.loversSee}
               </button>
             </>
           ) : (
             <>
               <div className="reveal">
                 <div>
-                  <div className="muted">Tu es amoureux de</div>
+                  <div className="muted">{t.lg.loversYouLove}</div>
                   <div className="word">{other.name}</div>
-                  <div className="muted">Si l’un de vous meurt, l’autre meurt de chagrin.</div>
+                  <div className="muted">{t.lg.loversWarning}</div>
                 </div>
               </div>
               <button
@@ -1461,7 +1411,7 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
                   last ? goToStep(phase.resumeIdx) : setPhase({ ...phase, index: phase.index + 1, revealed: false })
                 }
               >
-                {last ? 'La nuit continue' : 'Suivant'}
+                {last ? t.lg.loversContinue : t.common.next}
               </button>
             </>
           )}
@@ -1475,26 +1425,17 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
     const puppet = p.role === 'marionnettiste'
     return (
       <div className="app day">
-        <TopBar title={`Aube du jour ${nightNo}`} right={quitButton} />
+        <TopBar title={t.lg.dawnOf(nightNo)} right={quitButton} />
         <div className="content fade-step" key={phaseKey}>
           <div className="card">
-            <h2>{puppet ? 'La marionnette tombe' : 'L’Ancien encaisse'}</h2>
-            <p className="muted">
-              Les loups ont désigné <strong>{p.name}</strong>
-              {puppet
-                ? ' : c’est sa marionnette qui est éliminée à sa place.'
-                : ' : sa vieille carcasse survit à cette première morsure.'}
-            </p>
-            <p className="muted">
-              {puppet
-                ? `${p.name} reste dans la partie, mais ne peut plus prononcer un seul mot : uniquement des gestes.`
-                : `${p.name} reste dans la partie. La prochaine morsure lui sera fatale.`}
-            </p>
+            <h2>{puppet ? t.lg.puppetFalls : t.lg.elderHolds}</h2>
+            <p className="muted">{puppet ? t.lg.puppetLead(p.name) : t.lg.elderLead(p.name)}</p>
+            <p className="muted">{puppet ? t.lg.puppetNote(p.name) : t.lg.elderNote(p.name)}</p>
           </div>
         </div>
         <div className="footer-actions">
           <button className="primary big block" onClick={() => resolveDeaths(players, phase.pending, 'dawn', 'day')}>
-            Continuer
+            {t.common.continue}
           </button>
         </div>
       </div>
@@ -1507,15 +1448,15 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
     if (!phase.revealed) {
       return (
         <div className="app night">
-          <TopBar title="Le Colosse se réveille" />
+          <TopBar title={t.lg.colossusWakes} />
           <div className="content fade-step" key={phaseKey}>
-            <p className="muted center-text">Les loups ont dévoré le Colosse. Passe-lui le téléphone.</p>
+            <p className="muted center-text">{t.lg.colossusIntro}</p>
             <p className="big-name">{colosse.name}</p>
             <div className="reveal">
-              <span className="muted">Il va découvrir ses assaillants et en emporter un.</span>
+              <span className="muted">{t.lg.colossusHint}</span>
             </div>
             <button className="primary big block" onClick={() => setPhase({ ...phase, revealed: true })}>
-              Découvrir la meute
+              {t.lg.colossusDiscover}
             </button>
           </div>
         </div>
@@ -1523,10 +1464,10 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
     }
     return (
       <div className="app night">
-        <TopBar title="Le Colosse frappe" subtitle="Il en emporte un dans la tombe" />
+        <TopBar title={t.lg.colossusStrikes} subtitle={t.lg.colossusSub} />
         <div className="content fade-step" key={phaseKey}>
           <Emblem icon="💥" />
-          <p className="step-title">Quel Loup-Garou emporter ?</p>
+          <p className="step-title">{t.lg.colossusAsk}</p>
           <div className="list">
             {wolves.map((p) => (
               <button
@@ -1535,7 +1476,7 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
                 onClick={() => setTarget(p.playerId)}
               >
                 <span className="grow">{p.name}</span>
-                <span className="badge danger">Loup-Garou</span>
+                <span className="badge danger">{t.lg.badges.wolf}</span>
               </button>
             ))}
           </div>
@@ -1546,7 +1487,7 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
             disabled={!target}
             onClick={() => resolveDeaths(players, [...phase.pending, target!], 'dawn', 'day')}
           >
-            L’emporter dans la tombe
+            {t.lg.colossusTake}
           </button>
         </div>
       </div>
@@ -1569,24 +1510,21 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
 
     return (
       <div className="app night">
-        <TopBar title="La Servante Dévouée" />
+        <TopBar title={t.lg.maidTitle} />
         <div className="content fade-step" key={phaseKey}>
           <Emblem icon="🕯️" />
-          <p className="muted center-text">Avant toute révélation, passe le téléphone à</p>
+          <p className="muted center-text">{t.lg.maidPass}</p>
           <p className="big-name">{servante.name}</p>
-          <p className="muted center-text">
-            Elle peut prendre la place d’un éliminé <strong>sans voir sa carte</strong> : elle en hérite, et le rôle
-            du mort ne sera jamais montré à la table. Une seule fois dans la partie.
-          </p>
+          <p className="muted center-text">{t.lg.maidNote}</p>
           <div className="list">
             {dead.map((p) => (
               <button key={p.playerId} className="item" onClick={() => take(p.playerId)}>
                 <span className="grow">
                   {p.name}
                   <br />
-                  <span className="muted">Prendre sa place, sans savoir ce qu’il était</span>
+                  <span className="muted">{t.lg.maidTake}</span>
                 </span>
-                <span className="badge">carte face cachée</span>
+                <span className="badge">{t.lg.maidFaceDown}</span>
               </button>
             ))}
           </div>
@@ -1596,7 +1534,7 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
             className="primary big block"
             onClick={() => setPhase({ name: 'deaths', ids: phase.ids, context: phase.context, next: phase.next })}
           >
-            Elle reste elle-même
+            {t.lg.maidStay}
           </button>
         </div>
       </div>
@@ -1604,18 +1542,18 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
   }
 
   if (phase.name === 'servante-reveal') {
-    const def = ROLES[phase.role]
+    const def = t.roles[phase.role]
     return (
       <div className="app night">
-        <TopBar title="La Servante hérite" />
+        <TopBar title={t.lg.maidInherits} />
         <div className="content fade-step" key={phaseKey}>
           <div className="reveal">
             <div>
               <div className="role">{def.label}</div>
               <div className="muted">{def.description}</div>
-              {def.camp === 'loups' && (
-                <div style={{ marginTop: 12 }}>
-                  <span className="badge danger">Tu changes de camp : tu joues désormais avec les loups.</span>
+              {ROLES[phase.role].camp === 'loups' && (
+                <div className="pad-top">
+                  <span className="badge danger">{t.lg.maidSwitchesCamp}</span>
                 </div>
               )}
             </div>
@@ -1624,7 +1562,7 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
             className="primary big block"
             onClick={() => setPhase({ name: 'deaths', ids: phase.ids, context: phase.context, next: phase.next })}
           >
-            Elle referme la carte
+            {t.lg.maidCloses}
           </button>
         </div>
       </div>
@@ -1636,30 +1574,30 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
     const elderBurned = phase.context === 'vote' && dead.some((p) => p.role === 'ancien')
     const title =
       phase.context === 'dawn'
-        ? `Aube du jour ${nightNo}`
+        ? t.lg.dawnOf(nightNo)
         : phase.context === 'vote'
-          ? 'Verdict du village'
-          : 'Le coup de feu'
+          ? t.lg.verdict
+          : t.lg.gunshot
     return (
       <div className={`app ${phase.context === 'dawn' || phase.context === 'vote' ? 'day' : ''}`}>
         <TopBar title={title} right={quitButton} />
         <div className="content fade-step" key={phaseKey}>
           {dead.length === 0 ? (
             <div className="card">
-              <h2>Personne n’est mort</h2>
-              <p className="muted">Le village se réveille intact.</p>
+              <h2>{t.lg.nobodyDied}</h2>
+              <p className="muted">{t.lg.villageIntact}</p>
             </div>
           ) : (
             <div className="card">
-              <h2>{dead.length > 1 ? 'Ils nous quittent' : 'Il/elle nous quitte'}</h2>
+              <h2>{dead.length > 1 ? t.lg.theyLeaveUs : t.lg.heSheLeavesUs}</h2>
               <div className="list">
                 {dead.map((p, i) => (
                   <div key={p.playerId} className="item death-item" style={{ animationDelay: `${i * 140}ms` }}>
                     <span className="grow">{p.name}</span>
                     <span className="badge danger">
-                      {hiddenRoles.includes(p.playerId) ? 'carte non révélée' : ROLES[p.role].label}
+                      {hiddenRoles.includes(p.playerId) ? t.lg.cardHidden : t.roles[p.role].label}
                     </span>
-                    {p.lover && <span className="badge warn">amoureux</span>}
+                    {p.lover && <span className="badge warn">{t.lg.badges.inLove}</span>}
                   </div>
                 ))}
               </div>
@@ -1667,11 +1605,8 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
           )}
           {elderBurned && (
             <div className="card">
-              <h3>La rancune de l’Ancien</h3>
-              <p className="muted">
-                Le village a brûlé l’Ancien : tous les villageois perdent leurs pouvoirs. Plus aucune étape de
-                nuit du village à partir de maintenant.
-              </p>
+              <h3>{t.lg.elderGrudge}</h3>
+              <p className="muted">{t.lg.elderGrudgeNote}</p>
             </div>
           )}
         </div>
@@ -1680,7 +1615,7 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
             className="primary big block"
             onClick={() => afterDeaths(phase.ids, phase.next, phase.context)}
           >
-            Continuer
+            {t.common.continue}
           </button>
         </div>
       </div>
@@ -1691,15 +1626,15 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
     const hunter = byId(phase.playerId)!
     return (
       <div className="app">
-        <TopBar title="Dernier souffle" />
+        <TopBar title={t.lg.hunterTitle} />
         <div className="content fade-step" key={phaseKey}>
-          <p className="step-title">{hunter.name} pouvait tirer</p>
-          <p className="muted">Il emporte un joueur de son choix dans la tombe.</p>
+          <p className="step-title">{t.lg.hunterCould(hunter.name)}</p>
+          <p className="muted">{t.lg.hunterNote}</p>
           <AliveList players={players} target={target} onSelect={setTarget} />
         </div>
         <div className="footer-actions">
           <button className="primary big block" disabled={!target} onClick={() => hunterShoot(phase.next)}>
-            Tirer
+            {t.lg.hunterShoot}
           </button>
         </div>
       </div>
@@ -1710,20 +1645,17 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
     const idiot = byId(phase.playerId)!
     return (
       <div className="app day">
-        <TopBar title="Verdict du village" right={quitButton} />
+        <TopBar title={t.lg.verdict} right={quitButton} />
         <div className="content fade-step" key={phaseKey}>
           <p className="big-name">{idiot.name}</p>
           <div className="reveal">
             <div>
-              <div className="role">L’Idiot du Village</div>
-              <div className="muted">
-                On ne pend pas un innocent pareil : il est épargné, mais il perd son droit de vote pour le reste
-                de la partie.
-              </div>
+              <div className="role">{t.lg.idiotTitle}</div>
+              <div className="muted">{t.lg.idiotNote}</div>
             </div>
           </div>
           <button className="primary big block" onClick={() => afterVote(players)}>
-            Continuer
+            {t.common.continue}
           </button>
         </div>
       </div>
@@ -1735,10 +1667,10 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
     const toggle = (id: ID) => setSelection((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]))
     return (
       <div className="app day">
-        <TopBar title="Le Bouc Émissaire" right={quitButton} />
+        <TopBar title={t.lg.scapegoatTitle} right={quitButton} />
         <div className="content fade-step" key={phaseKey}>
-          <p className="muted center-text">Brûlé pour l’égalité, {bouc.name} se venge. Passe-lui le téléphone.</p>
-          <p className="step-title">Qui sera privé de vote demain ?</p>
+          <p className="muted center-text">{t.lg.scapegoatIntro(bouc.name)}</p>
+          <p className="step-title">{t.lg.scapegoatAsk}</p>
           <div className="list">
             {alive.map((p) => (
               <button
@@ -1747,7 +1679,9 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
                 onClick={() => toggle(p.playerId)}
               >
                 <span className="grow">{p.name}</span>
-                <span className="badge">{selection.includes(p.playerId) ? 'privé de vote' : 'vote'}</span>
+                <span className={`badge${selection.includes(p.playerId) ? ' warn' : ''}`}>
+                  {selection.includes(p.playerId) ? t.lg.scapegoatBanned : t.lg.scapegoatVotes}
+                </span>
               </button>
             ))}
           </div>
@@ -1761,7 +1695,7 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
               afterVote(players)
             }}
           >
-            Valider
+            {t.common.validate}
           </button>
         </div>
       </div>
@@ -1771,18 +1705,15 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
   if (phase.name === 'judge') {
     return (
       <div className="app day">
-        <TopBar title="Le Juge Bègue" right={quitButton} />
+        <TopBar title={t.lg.judgeTitle} right={quitButton} />
         <div className="content fade-step" key={phaseKey}>
           <Emblem icon="⚖️" />
-          <p className="step-title">Un second vote ?</p>
-          <p className="muted">
-            Le Juge peut exiger un second vote dans la foulée, une seule fois dans la partie. Le village revote
-            immédiatement.
-          </p>
+          <p className="step-title">{t.lg.judgeAsk}</p>
+          <p className="muted">{t.lg.judgeNote}</p>
         </div>
         <div className="footer-actions">
           <button className="ghost" onClick={() => startNight(players)}>
-            La nuit tombe
+            {t.lg.judgeNightFalls}
           </button>
           <button
             className="primary big grow"
@@ -1792,7 +1723,7 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
               setPhase({ name: 'day' })
             }}
           >
-            Second vote
+            {t.lg.judgeSecondVote}
           </button>
         </div>
       </div>
@@ -1805,39 +1736,33 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
     const bouc = players.find((p) => p.alive && p.role === 'bouc')
     return (
       <div className="app day">
-        <TopBar title={`Jour ${nightNo}`} subtitle={`${plural(alive.length, 'survivant')}`} right={quitButton} />
+        <TopBar title={t.lg.day(nightNo)} subtitle={t.common.survivors(alive.length)} right={quitButton} />
         <div className="content fade-step" key={phaseKey}>
           <div className="card">
-            <h2>Débat et vote</h2>
-            <p className="muted">Le village débat, puis désigne un joueur à éliminer.</p>
-            {crow && (
-              <p className="muted">
-                🐦‍⬛ Le Corbeau a désigné <strong>{crow.name}</strong> : il commence avec deux voix contre lui.
-              </p>
-            )}
+            <h2>{t.lg.debateAndVote}</h2>
+            <p className="muted">{t.lg.debateNote}</p>
+            {crow && <p className="muted">🐦‍⬛ {t.lg.crowDesignated(crow.name)}</p>}
             {noVoteToday.length > 0 && (
-              <p className="muted">
-                Privés de vote par le Bouc Émissaire : {noVoteToday.map((id) => byId(id)?.name).join(', ')}.
-              </p>
+              <p className="muted">{t.lg.bannedToday(noVoteToday.map((id) => byId(id)?.name).join(', '))}</p>
             )}
           </div>
           {debateMinutes > 0 && <DebateTimer key={`debat-${nightNo}-${judgeUsed}`} minutes={debateMinutes} />}
           <AliveList players={players} target={target} onSelect={setTarget}
             extra={(p) => (
               <>
-                {p.playerId === crowId && <span className="badge danger">+2 voix</span>}
-                {noVoteToday.includes(p.playerId) && <span className="badge warn">ne vote pas</span>}
+                {p.playerId === crowId && <span className="badge danger">{t.lg.badges.extraVotes}</span>}
+                {noVoteToday.includes(p.playerId) && <span className="badge warn">{t.lg.badges.cannotVote}</span>}
               </>
             )}
           />
         </div>
         <div className="footer-actions">
           <button className="ghost" onClick={() => voteOut(null)}>
-            Personne
+            {t.common.nobody}
           </button>
           {bouc && (
             <button className="ghost" onClick={voteTie}>
-              Égalité
+              {t.lg.tie}
             </button>
           )}
           <button
@@ -1848,7 +1773,7 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
               voteOut(target)
             }}
           >
-            Éliminer
+            {t.lg.eliminate}
           </button>
         </div>
       </div>
@@ -1859,23 +1784,23 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
   const scoring = session.scoring.loupgarou
   const winnerLabel =
     phase.winner === 'village'
-      ? 'le Village'
+      ? t.lg.winners.village
       : phase.winner === 'loups'
-        ? 'les Loups-Garous'
+        ? t.lg.winners.loups
         : phase.winner === 'solitaire'
-          ? 'le Loup-Garou Blanc'
-          : 'les Amoureux'
+          ? t.lg.winners.solitaire
+          : t.lg.winners.amoureux
   return (
     <div className="app">
-      <TopBar title="Fin de la partie" />
+      <TopBar title={t.result.title} />
       <div className="content fade-step" key={phaseKey}>
         <div className="card victory">
           <span className="trophy">🏆</span>
-          <h2>Victoire : {winnerLabel}</h2>
+          <h2>{t.result.victory(winnerLabel)}</h2>
           <p className="muted">{phase.reason}</p>
         </div>
         <div className="card">
-          <h3>Points</h3>
+          <h3>{t.result.points}</h3>
           <div className="list">
             {players.map((p) => {
               const won =
@@ -1888,8 +1813,8 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
               return (
                 <div key={p.playerId} className="item">
                   <span className="grow">{p.name}</span>
-                  <span className="badge">{ROLES[p.role].label}</span>
-                  {p.wolf && <span className="badge danger">rallié</span>}
+                  <span className="badge">{t.roles[p.role].label}</span>
+                  {p.wolf && <span className="badge danger">{t.lg.badges.turned}</span>}
                   <span className={`badge ${won ? 'success' : ''}`}>+{pts}</span>
                 </div>
               )
@@ -1899,10 +1824,10 @@ export default function LoupGarouGame({ session, onFinish, onQuit }: GameProps) 
       </div>
       <div className="footer-actions">
         <button className="ghost" onClick={onQuit}>
-          Ignorer
+          {t.common.ignore}
         </button>
         <button className="primary big grow" onClick={() => save(phase.winner, phase.reason)}>
-          Enregistrer au classement
+          {t.result.save}
         </button>
       </div>
     </div>

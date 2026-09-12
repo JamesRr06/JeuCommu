@@ -8,16 +8,6 @@ export interface Player {
 /** Camps possibles, tous jeux confondus. */
 export type Camp = 'civils' | 'undercover' | 'mrwhite' | 'village' | 'loups' | 'amoureux' | 'solitaire'
 
-export const CAMP_LABEL: Record<Camp, string> = {
-  civils: 'Civils',
-  undercover: 'Undercover',
-  mrwhite: 'Mr White',
-  village: 'Village',
-  loups: 'Loups-Garous',
-  amoureux: 'Amoureux',
-  solitaire: 'Loup-Garou Blanc',
-}
-
 export type GameId = 'undercover' | 'loupgarou'
 
 // ---------- Réglages propres à chaque jeu ----------

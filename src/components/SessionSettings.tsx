@@ -1,5 +1,6 @@
 import { ConfirmButton } from './UI'
 import SettingsSheet from './SettingsSheet'
+import { useT } from '../i18n'
 import {
   addPlayer,
   deleteSession,
@@ -23,6 +24,7 @@ export default function SessionSettings({
   onClose: () => void
   onDeleted: () => void
 }) {
+  const t = useT()
   const session = useSession(sessionId)
   if (!session) return null
   const game = getGame(session.gameId)
@@ -37,8 +39,8 @@ export default function SessionSettings({
         onAdd: (n) => addPlayer(sessionId, n),
         onRename: (id, n) => renamePlayer(sessionId, id, n),
         onRemove: (id) => removePlayer(sessionId, id),
-        removeMessage: (p) => `Retirer ${p.name} ? Ses parties déjà jouées restent au classement.`,
-        note: 'Les changements s’appliquent à la prochaine partie.',
+        removeMessage: (p) => t.settings.removeNote(p.name),
+        note: t.settings.playersNote,
       }}
       game={game}
       config={{
@@ -49,11 +51,11 @@ export default function SessionSettings({
       scoring={{ value: session.scoring, onChange: (s) => setScoring(sessionId, s) }}
       footer={
         <div className="card">
-          <h3>Zone rouge</h3>
+          <h3>{t.settings.dangerZone}</h3>
           <ConfirmButton
             className="danger block"
-            label="Supprimer la session"
-            message={`Supprimer « ${session.name} » et tout son classement ?`}
+            label={t.settings.deleteSession}
+            message={t.settings.deleteSessionAsk(session.name)}
             onConfirm={() => {
               onClose()
               deleteSession(sessionId)
