@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { haptic } from '../lib'
+import { useT } from '../i18n'
 
 /** Signal de fin de débat : vibration + trois bips, tout ce dont dispose une app hors ligne. */
 function ringEnd() {
@@ -39,6 +40,7 @@ function format(ms: number): string {
  * Le monter avec une `key` qui change à chaque jour suffit à le réinitialiser.
  */
 export default function DebateTimer({ minutes }: { minutes: number }) {
+  const t = useT()
   const total = minutes * 60_000
   const [endAt, setEndAt] = useState(() => Date.now() + total)
   const [pausedMs, setPausedMs] = useState<number | null>(null)
@@ -71,7 +73,7 @@ export default function DebateTimer({ minutes }: { minutes: number }) {
 
   return (
     <div className={`card timer-card${over ? ' over' : ''}`}>
-      <h3>{over ? 'Temps écoulé — au vote !' : 'Débat en cours'}</h3>
+      <h3>{over ? t.timer.over : t.timer.running}</h3>
       <div className="timer">{format(remaining)}</div>
       <div className="timer-bar">
         <i style={{ width: `${total ? (remaining / total) * 100 : 0}%` }} />
@@ -88,7 +90,7 @@ export default function DebateTimer({ minutes }: { minutes: number }) {
             }
           }}
         >
-          {running ? 'Pause' : 'Reprendre'}
+          {running ? t.timer.pause : t.timer.resume}
         </button>
         <button
           className="grow small"
@@ -99,10 +101,10 @@ export default function DebateTimer({ minutes }: { minutes: number }) {
             else setPausedMs(next)
           }}
         >
-          +1 min
+          {t.timer.addMinute}
         </button>
         <button className="grow small" onClick={restart}>
-          Relancer
+          {t.timer.restart}
         </button>
       </div>
     </div>

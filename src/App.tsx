@@ -4,7 +4,9 @@ import MenuScreen from './screens/MenuScreen'
 import SetupScreen, { type SetupStep } from './screens/SetupScreen'
 import SessionScreen from './screens/SessionScreen'
 import SessionSettings from './components/SessionSettings'
+import Dialogs, { askConfirm } from './components/Dialog'
 import { OpenSettings } from './components/settings-context'
+import { t } from './i18n'
 import { addRound, useSession } from './store'
 import { getGame } from './games/registry'
 import type { GameId, ID, Round } from './types'
@@ -30,6 +32,16 @@ export default function App() {
 
   useAndroidBackButton(view, go)
 
+  return (
+    <>
+      <Screen view={view} go={go} />
+      <Dialogs />
+    </>
+  )
+}
+
+/** Écran courant. Le rendu des alertes lui est extérieur, pour survivre aux changements d'écran. */
+function Screen({ view, go }: { view: View; go: (v: View, dir?: 'fwd' | 'back') => void }) {
   if (view.name === 'menu') {
     return (
       <MenuScreen
@@ -93,8 +105,11 @@ function useAndroidBackButton(view: View, go: (v: View, dir?: 'fwd' | 'back') =>
         else back({ name: 'menu' })
       } else if (v.name === 'session') {
         back({ name: 'menu' })
-      } else if (confirm('Quitter la partie en cours ?')) {
-        back({ name: 'session', id: v.sessionId })
+      } else {
+        const text = t()
+        askConfirm({ title: text.app.quitRound, confirmLabel: text.app.quit, destructive: true }).then((ok) => {
+          if (ok) back({ name: 'session', id: v.sessionId })
+        })
       }
     })
     return () => {

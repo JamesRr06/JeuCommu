@@ -25,17 +25,13 @@ export function normalize(s: string): string {
     .replace(/s$/, '')
 }
 
-export function formatDate(ts: number): string {
-  return new Date(ts).toLocaleDateString('fr-FR', {
+export function formatDate(ts: number, intl: string): string {
+  return new Date(ts).toLocaleDateString(intl, {
     day: '2-digit',
     month: '2-digit',
     hour: '2-digit',
     minute: '2-digit',
   })
-}
-
-export function plural(n: number, one: string, many = one + 's'): string {
-  return `${n} ${n > 1 ? many : one}`
 }
 
 /**

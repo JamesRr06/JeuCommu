@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react'
+import type { Dict } from '../i18n'
 import type { GameConfig, GameId, Round, Session } from '../types'
 import UndercoverGame from './undercover/UndercoverGame'
 import LoupGarouGame from './loupgarou/LoupGarouGame'
@@ -18,21 +19,25 @@ export interface ConfigEditorProps {
   onChange: (config: GameConfig) => void
 }
 
+/**
+ * Définition d'un jeu. Tout ce qui s'affiche reçoit le dictionnaire courant en
+ * argument : la langue peut changer sans recharger l'application.
+ */
 export interface GameDef {
   id: GameId
-  name: string
   emoji: string
-  tagline: string
-  /** Quelques points clés affichés sur la carte du menu. */
-  highlights: string[]
   minPlayers: number
+  name: (t: Dict) => string
+  tagline: (t: Dict) => string
+  /** Quelques points clés affichés sur la carte du menu. */
+  highlights: (t: Dict) => string[]
   /** Camps rétribués, dans l'ordre d'affichage du barème. */
-  camps: { key: string; label: string }[]
+  camps: (t: Dict) => { key: string; label: string }[]
   /** Composition conseillée pour cet effectif, proposée au narrateur sans être imposée. */
   suggest: (playerCount: number) => GameConfig
-  validate: (playerCount: number, config: GameConfig) => string | null
+  validate: (playerCount: number, config: GameConfig, t: Dict) => string | null
   /** Résumé court des réglages, affiché sur l'écran de session. */
-  describe: (playerCount: number, config: GameConfig) => string[]
+  describe: (playerCount: number, config: GameConfig, t: Dict) => string[]
   ConfigEditor: ComponentType<ConfigEditorProps>
   component: ComponentType<GameProps>
 }
@@ -41,15 +46,15 @@ export interface GameDef {
 export const GAMES: GameDef[] = [
   {
     id: 'undercover',
-    name: 'Undercover',
     emoji: '🕵️',
-    tagline: 'Un mot pour les civils, un autre pour l’infiltré. Décris sans te faire démasquer.',
-    highlights: ['Distribution des mots en privé', 'Vote et élimination', 'Mr White peut voler la victoire'],
     minPlayers: 3,
-    camps: [
-      { key: 'civils', label: 'Civils' },
-      { key: 'undercover', label: 'Undercover' },
-      { key: 'mrwhite', label: 'Mr White' },
+    name: (t) => t.games.undercover.name,
+    tagline: (t) => t.games.undercover.tagline,
+    highlights: (t) => t.games.undercover.highlights,
+    camps: (t) => [
+      { key: 'civils', label: t.camps.civils },
+      { key: 'undercover', label: t.camps.undercover },
+      { key: 'mrwhite', label: t.camps.mrwhite },
     ],
     suggest: undercoverConfig.suggest,
     validate: undercoverConfig.validate,
@@ -59,16 +64,16 @@ export const GAMES: GameDef[] = [
   },
   {
     id: 'loupgarou',
-    name: 'Loup-Garou',
     emoji: '🐺',
-    tagline: 'Nuits, pouvoirs et votes : le village contre la meute, guidé par l’app.',
-    highlights: ['Narrateur guidé étape par étape', '24 rôles au choix', 'Morts et victoires calculées'],
     minPlayers: 4,
-    camps: [
-      { key: 'village', label: 'Village' },
-      { key: 'loups', label: 'Loups-Garous' },
-      { key: 'amoureux', label: 'Amoureux' },
-      { key: 'solitaire', label: 'Loup-Garou Blanc' },
+    name: (t) => t.games.loupgarou.name,
+    tagline: (t) => t.games.loupgarou.tagline,
+    highlights: (t) => t.games.loupgarou.highlights,
+    camps: (t) => [
+      { key: 'village', label: t.camps.village },
+      { key: 'loups', label: t.camps.loups },
+      { key: 'amoureux', label: t.camps.amoureux },
+      { key: 'solitaire', label: t.camps.solitaire },
     ],
     suggest: loupgarouConfig.suggest,
     validate: loupgarouConfig.validate,
